@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import ServiceCard from '../ServiceCard.astro';
+import CtaBand from '../CtaBand.astro';
+import { ui, type Lang } from '../../i18n';
+import { getServices } from '../../lib';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const services = await getServices(lang);
+---
+<Base wide lang={lang} title={t.servicesPage.title} description={t.servicesPage.sub}>
+  <div class="page-head"><h1>{t.servicesPage.title}</h1><p>{t.servicesPage.sub}</p></div>
+  <div class="grid">{services.map((s) => <ServiceCard entry={s} lang={lang} />)}</div>
+
+  <section class="block">
+    <div class="block-head"><h2>{t.servicesPage.engageTitle}</h2></div>
+    <div class="grid">
+      {t.servicesPage.engage.map((x) => (
+        <div class="card static"><h3>{x.t}</h3><p>{x.d}</p></div>
+      ))}
+    </div>
+    <p class="meta engage-note">{t.servicesPage.engageNote}</p>
+  </section>
+
+  <section class="block narrow">
+    <div class="block-head"><h2>{t.servicesPage.faq}</h2></div>
+    <div class="faq">
+      {t.faq.map((f) => <details><summary>{f.q}</summary><p>{f.a}</p></details>)}
+    </div>
+  </section>
+
+  <CtaBand lang={lang} />
+</Base>

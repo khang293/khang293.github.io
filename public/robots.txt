@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://khang293.github.io/sitemap-index.xml

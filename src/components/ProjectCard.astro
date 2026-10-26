@@ -1,0 +1,14 @@
+---
+import { lp, ui, type Lang } from '../i18n';
+import { slugOf } from '../lib';
+interface Props { entry: any; lang: Lang; }
+const { entry, lang } = Astro.props;
+const d = entry.data;
+---
+<a class="card" href={lp(lang, `/projects/${slugOf(entry.id)}/`)}>
+  <div class="ico">{d.icon}</div>
+  {d.sample && <span class="badge">{ui[lang].sample}</span>}
+  <h3>{d.title}</h3>
+  <p>{d.summary}</p>
+  {d.stack.length > 0 && <span class="tags">{d.stack.slice(0, 4).map((s: string) => <span class="tag">{s}</span>)}</span>}
+</a>

@@ -1,0 +1,24 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { getJournal, fmtDate, tagSlug } from '../../lib';
+
+export async function getStaticPaths() {
+  return (await getJournal()).map((entry) => ({ params: { id: entry.id }, props: { entry } }));
+}
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+<Base title={entry.data.title}>
+  <article class="article">
+    <header>
+      <h1>{entry.data.title}</h1>
+      <div class="meta">{fmtDate(entry.data.date)}{entry.data.draft ? ' · BẢN NHÁP' : ''}</div>
+      <span class="tags">
+        {entry.data.tags.map((t) => <a class="tag" href={`/tags/${tagSlug(t)}/`}>#{t}</a>)}
+      </span>
+    </header>
+    <div class="prose"><Content /></div>
+  </article>
+  <p><a href="/journal/">← Tất cả nhật ký</a></p>
+</Base>

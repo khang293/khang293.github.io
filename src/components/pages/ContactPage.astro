@@ -1,0 +1,59 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config';
+import { ui, lp, type Lang } from '../../i18n';
+import { getServices } from '../../lib';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const c = t.contact;
+const services = await getServices(lang);
+const channels = [
+  SITE.email && { label: 'Email', value: SITE.email, href: `mailto:${SITE.email}` },
+  SITE.zalo && { label: 'Zalo', value: SITE.zalo, href: SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}` },
+  SITE.telegram && { label: 'Telegram', value: `@${SITE.telegram}`, href: `https://t.me/${SITE.telegram}` },
+  SITE.github && { label: 'GitHub', value: SITE.github.replace('https://', ''), href: SITE.github },
+  SITE.linkedin && { label: 'LinkedIn', value: 'LinkedIn', href: SITE.linkedin },
+].filter(Boolean) as { label: string; value: string; href: string }[];
+const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
+---
+<Base lang={lang} title={c.title} description={c.sub}>
+  <h1>{c.title}</h1>
+  <p class="meta">{c.sub}</p>
+
+  <p id="sent" class="ok" hidden>✅ {lang === 'vi' ? 'Đã gửi! Mình sẽ phản hồi sớm.' : 'Sent! I will reply soon.'}</p>
+
+  {SITE.formspree ? (
+    <form class="form" method="post" action={`https://formspree.io/f/${SITE.formspree}`}>
+      <label>{c.name}<input name="name" required maxlength="80" autocomplete="name" /></label>
+      <label>{c.email}<input name="email" type="email" required autocomplete="email" /></label>
+      <label>{c.service}
+        <select name="service">
+          {services.map((s) => <option value={s.data.title}>{s.data.title}</option>)}
+          <option value="other">{c.other}</option>
+        </select>
+      </label>
+      <label>{c.message}<textarea name="message" rows="6" required maxlength="3000"></textarea></label>
+      <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="display:none" />
+      <input type="hidden" name="_subject" value={`[${SITE.brand}] ${lang === 'vi' ? 'Liên hệ mới' : 'New inquiry'}`} />
+      <input type="hidden" name="_next" value={thanks} />
+      <button class="btn" type="submit">{c.send}</button>
+    </form>
+  ) : (
+    <p class="notice">{c.notConfigured}</p>
+  )}
+
+  {channels.length > 0 && (
+    <section class="panel">
+      <h2>{c.direct}</h2>
+      <ul class="plain">
+        {channels.map((ch) => <li><b>{ch.label}:</b> <a href={ch.href} rel="noopener">{ch.value}</a></li>)}
+      </ul>
+    </section>
+  )}
+
+  <script is:inline>
+    if (new URLSearchParams(location.search).has('sent')) document.getElementById('sent').hidden = false;
+  </script>
+</Base>

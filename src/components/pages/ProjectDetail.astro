@@ -1,0 +1,40 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import CtaBand from '../CtaBand.astro';
+import { ui, lp, type Lang } from '../../i18n';
+import { fmtDate } from '../../lib';
+
+interface Props { lang: Lang; entry: any; }
+const { lang, entry } = Astro.props;
+const t = ui[lang];
+const d = entry.data;
+const { Content } = await render(entry);
+---
+<Base lang={lang} title={d.title} description={d.summary}>
+  <article class="article">
+    <header>
+      <div class="hero-ico">{d.icon}</div>
+      {d.sample && <span class="badge">{t.sample}</span>}
+      <h1>{d.title}</h1>
+      <p class="lead">{d.summary}</p>
+      <div class="meta">{fmtDate(d.date, t.locale)}{d.role ? ` · ${t.role}: ${d.role}` : ''}</div>
+      {d.url && <p><a class="btn sm" href={d.url} rel="noopener" target="_blank">{t.visit}</a></p>}
+    </header>
+    {d.stack.length > 0 && (
+      <section class="panel">
+        <h2>{t.stack}</h2>
+        <div class="chips">{d.stack.map((s: string) => <span class="chip-big">{s}</span>)}</div>
+      </section>
+    )}
+    <div class="prose"><Content /></div>
+    {d.results.length > 0 && (
+      <section class="panel">
+        <h2>{t.results}</h2>
+        <ul class="ticks">{d.results.map((r: string) => <li>{r}</li>)}</ul>
+      </section>
+    )}
+  </article>
+  <p><a href={lp(lang, '/projects/')}>{t.back}</a></p>
+  <CtaBand lang={lang} />
+</Base>

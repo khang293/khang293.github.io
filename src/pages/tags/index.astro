@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getTags } from '../../lib';
+const tags = [...(await getTags()).entries()].sort((a, b) => b[1].count - a[1].count);
+---
+<Base title="Tags">
+  <h1>Tags</h1>
+  {tags.length ? (
+    <div class="cloud">
+      {tags.map(([slug, t]) => <a class="tag" href={`/tags/${slug}/`}>#{t.name} <small>{t.count}</small></a>)}
+    </div>
+  ) : <p class="empty">Chưa có tag nào.</p>}
+</Base>

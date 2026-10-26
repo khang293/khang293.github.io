@@ -1,0 +1,93 @@
+---
+import Base from '../../layouts/Base.astro';
+import ServiceCard from '../ServiceCard.astro';
+import ProjectCard from '../ProjectCard.astro';
+import EntryItem from '../EntryItem.astro';
+import CtaBand from '../CtaBand.astro';
+import { SITE } from '../../config';
+import { ui, lp, type Lang } from '../../i18n';
+import { getServices, getProjects, getPosts, readingTime } from '../../lib';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const text = SITE.text[lang];
+
+const services = (await getServices(lang)).slice(0, 4);
+const allProjects = await getProjects(lang);
+const featured = allProjects.filter((p) => p.data.featured);
+const projects = (featured.length ? featured : allProjects).slice(0, 3);
+const posts = (await getPosts(lang)).slice(0, 3);
+---
+<Base wide lang={lang}>
+  <section class="hero-big">
+    <p class="eyebrow">{text.role}</p>
+    <h1>{text.heroTitle}</h1>
+    <p class="lead">{text.heroSub}</p>
+    <div class="actions">
+      <a class="btn" href={lp(lang, '/contact/')}>{t.getQuote}</a>
+      <a class="btn ghost" href={lp(lang, '/projects/')}>{t.viewProjects}</a>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2>{t.home.problemsTitle}</h2></div>
+    <div class="grid">
+      {t.home.problems.map((x) => (
+        <div class="card static"><h3>{x.p}</h3><p>{x.s}</p></div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head row">
+      <div><h2>{t.home.services}</h2><p>{t.home.servicesSub}</p></div>
+      <a href={lp(lang, '/services/')}>{t.seeAll}</a>
+    </div>
+    <div class="grid">{services.map((s) => <ServiceCard entry={s} lang={lang} />)}</div>
+  </section>
+
+  {projects.length > 0 && (
+    <section class="block">
+      <div class="block-head row">
+        <div><h2>{t.home.projects}</h2><p>{t.home.projectsSub}</p></div>
+        <a href={lp(lang, '/projects/')}>{t.seeAll}</a>
+      </div>
+      <div class="grid">{projects.map((p) => <ProjectCard entry={p} lang={lang} />)}</div>
+    </section>
+  )}
+
+  <section class="block">
+    <div class="block-head"><h2>{t.home.whyTitle}</h2></div>
+    <div class="grid">
+      {t.home.why.map((x) => (
+        <div class="card static"><h3>{x.t}</h3><p>{x.d}</p></div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2>{t.home.process}</h2></div>
+    <ol class="steps">
+      {t.process.map((s, i) => <li><b>{i + 1}</b><h3>{s.t}</h3><p>{s.d}</p></li>)}
+    </ol>
+  </section>
+
+  <CtaBand lang={lang} />
+
+  <section class="block about-strip">
+    <p>{t.home.aboutStrip} <a href={lp(lang, '/about/')}>{t.home.aboutLink}</a></p>
+  </section>
+
+  {posts.length > 0 && (
+    <section class="block narrow">
+      <div class="block-head row"><h2>{t.home.latest}</h2><a href={lp(lang, '/posts/')}>{t.seeAll}</a></div>
+      <ul class="list">
+        {posts.map((p) => (
+          <EntryItem lang={lang} href={lp(lang, `/posts/${p.id}/`)} title={p.data.title} date={p.data.date}
+            description={p.data.description} tags={p.data.tags} minutes={readingTime(p.body)} />
+        ))}
+      </ul>
+    </section>
+  )}
+</Base>
