@@ -19,7 +19,7 @@ export async function getServices(lang: Lang) {
 
 export async function getProjects(lang: Lang) {
   // Theo `order` (nhỏ lên trước), dự án mẫu luôn xuống cuối, cùng nhóm thì mới nhất lên trên
-  return (await getCollection('projects', (e) => e.data.lang === lang)).sort(
+  return (await getCollection('projects', (e) => visible(e) && e.data.lang === lang)).sort(
     (a, b) =>
       Number(a.data.sample) - Number(b.data.sample) ||
       a.data.order - b.data.order ||

@@ -56,6 +56,7 @@ const projects = defineCollection({
     url: z.string().url().optional(),
     featured: z.boolean().default(false),
     sample: z.boolean().default(false),
+    draft: z.boolean().default(false), // true = ẩn khỏi web đã build (vẫn thấy khi chạy dev)
   }),
 });
 
