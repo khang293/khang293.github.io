@@ -8,6 +8,7 @@ interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = ui[lang];
 const c = t.contact;
+const f = c.fieldNames;
 const services = await getServices(lang);
 const channels = [
   SITE.email && { label: 'Email', value: SITE.email, href: `mailto:${SITE.email}` },
@@ -25,25 +26,27 @@ const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
   <p id="sent" class="ok" hidden>✅ {lang === 'vi' ? 'Đã gửi! Mình sẽ phản hồi sớm.' : 'Sent! I will reply soon.'}</p>
 
   {SITE.formspree ? (
-    <form class="form" method="post" action={`https://formspree.io/f/${SITE.formspree}`}>
-      <label>{c.name}<input name="name" required maxlength="80" autocomplete="name" /></label>
+    <form id="contact-form" class="form" method="post" action={`https://formspree.io/f/${SITE.formspree}`} data-brand={SITE.brand} data-prefix={f.subjectPrefix}>
+      <label>{c.name}<input name={f.name} required maxlength="80" autocomplete="name" /></label>
       <label>{c.email}<input name="email" type="email" required autocomplete="email" /></label>
       <label>{c.service}
-        <select name="service">
+        <select name={f.service} id="cf-service">
           {services.map((s) => <option value={s.data.title}>{s.data.title}</option>)}
-          <option value="other">{c.other}</option>
+          <option value={c.other}>{c.other}</option>
         </select>
       </label>
-      <label>{c.budget}<input name="budget" maxlength="80" placeholder={c.budgetHint} /></label>
+      <label>{c.budget}<input name={f.budget} maxlength="80" placeholder={c.budgetHint} /></label>
       <label>{c.timeline}
-        <select name="timeline">
+        <select name={f.timeline}>
           {c.timelineOpts.map((o) => <option value={o}>{o}</option>)}
         </select>
       </label>
-      <label>{c.message}<textarea name="message" rows="6" required maxlength="3000"></textarea></label>
+      <label>{c.message}<textarea name={f.message} rows="6" required maxlength="3000"></textarea></label>
       <p class="consent">{c.consent} <a href={lp(lang, '/privacy/')}>{t.privacy}</a>.</p>
       <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="display:none" />
-      <input type="hidden" name="_subject" value={`[${SITE.brand}] ${lang === 'vi' ? 'Liên hệ mới' : 'New inquiry'}`} />
+      <input type="hidden" name="_subject" id="cf-subject" value={`[${SITE.brand}] ${f.subjectPrefix}`} />
+      <input type="hidden" name={f.lang} value={f.langValue} />
+      <input type="hidden" name={f.page} id="cf-page" value="" />
       <input type="hidden" name="_next" value={thanks} />
       <button class="btn" type="submit">{c.send}</button>
     </form>
@@ -68,5 +71,23 @@ const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
 
   <script is:inline>
     if (new URLSearchParams(location.search).has('sent')) document.getElementById('sent').hidden = false;
+
+    // Tiêu đề email tự thêm tên người gửi và dịch vụ quan tâm; ghi lại trang gửi
+    (function () {
+      var form = document.getElementById('contact-form');
+      if (!form) return;
+      var page = document.getElementById('cf-page');
+      if (page) page.value = location.href.split('?')[0];
+      form.addEventListener('submit', function () {
+        var first = form.querySelector('input:not([type=hidden])');
+        var name = first ? first.value.trim().slice(0, 60) : '';
+        var svc = document.getElementById('cf-service');
+        var service = svc ? svc.value : '';
+        var subject = '[' + form.dataset.brand + '] ' + form.dataset.prefix;
+        if (name) subject += ': ' + name;
+        if (service) subject += ' - ' + service;
+        document.getElementById('cf-subject').value = subject;
+      });
+    })();
   </script>
 </Base>
