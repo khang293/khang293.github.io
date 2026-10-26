@@ -58,7 +58,7 @@ export const ui = {
       why: [
         { t: 'Trao đổi trực tiếp với người xây dựng', d: 'Bạn nói chuyện thẳng với người thiết kế và viết ứng dụng, không qua nhiều lớp trung gian.' },
         { t: 'Bám theo quy trình thực tế', d: 'Bắt đầu từ cách bạn đang làm việc, thay vì ép bạn theo một mẫu có sẵn.' },
-        { t: 'Đã làm hệ thống nhiều cấp, nhiều vai trò', d: 'Phê duyệt nhiều cấp, ủy quyền, phân quyền, giao diện song ngữ, quét mã vạch.' },
+        { t: 'Đã làm hệ thống nhiều cấp, nhiều vai trò', d: 'Quản lý hợp đồng, kiểm kê tài sản bằng quét mã vạch, quản lý nhà thầu, quản lý nhân sự: phê duyệt nhiều cấp, ủy quyền, phân quyền, giao diện song ngữ.' },
         { t: 'Có tài liệu bàn giao', d: 'Thiết kế và công thức được ghi lại để bạn không phụ thuộc vào một người.' },
       ],
       aboutStrip: 'Mình là Đinh Duy Khang, Power Platform Developer. Mình nhận xây dựng giải pháp cho cá nhân và doanh nghiệp.',
@@ -137,7 +137,7 @@ export const ui = {
       why: [
         { t: 'Talk directly to the person building it', d: 'You speak straight to the person who designs and writes the app, without layers of middlemen.' },
         { t: 'Built around your real process', d: 'We start from how you actually work, instead of forcing you into a ready-made template.' },
-        { t: 'Experience with multi-level, multi-role systems', d: 'Multi-level approvals, delegation, role-based access, bilingual interfaces and barcode scanning.' },
+        { t: 'Experience with multi-level, multi-role systems', d: 'Contract management, barcode-based asset inventory, contractor management and HR: multi-level approvals, delegation, role-based access and bilingual interfaces.' },
         { t: 'Handover documentation', d: 'Design and formulas are written down so you do not depend on a single person.' },
       ],
       aboutStrip: 'I am Đinh Duy Khang, a Power Platform Developer. I build solutions for individuals and businesses.',

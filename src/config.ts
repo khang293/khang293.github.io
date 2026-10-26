@@ -13,7 +13,7 @@ export const SITE = {
   telegram: '',  // username, không có @
 
   // Form liên hệ: tạo form miễn phí tại https://formspree.io rồi dán ID (phần sau /f/)
-  formspree: '',
+  formspree: 'xljjjjen',
 
   // Công nghệ chính (Power Platform) và công nghệ phụ (phát triển web)
   stack: ['Power Apps', 'Power Automate', 'Power BI', 'Dataverse', 'Power Fx', 'DAX', 'SharePoint', 'Microsoft Teams'],
