@@ -1,0 +1,11 @@
+---
+import { lp, ui, type Lang } from '../i18n';
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+---
+<section class="cta-band">
+  <h2>{t.home.ctaTitle}</h2>
+  <p>{t.home.ctaText}</p>
+  <a class="btn light" href={lp(lang, '/contact/')}>{t.getQuote}</a>
+</section>

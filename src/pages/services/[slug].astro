@@ -1,0 +1,9 @@
+---
+import ServiceDetail from '../../components/pages/ServiceDetail.astro';
+import { getServices, slugOf } from '../../lib';
+export async function getStaticPaths() {
+  return (await getServices('vi')).map((entry) => ({ params: { slug: slugOf(entry.id) }, props: { entry } }));
+}
+const { entry } = Astro.props;
+---
+<ServiceDetail lang="vi" entry={entry} />

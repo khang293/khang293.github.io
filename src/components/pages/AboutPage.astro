@@ -1,0 +1,22 @@
+---
+import Base from '../../layouts/Base.astro';
+import CtaBand from '../CtaBand.astro';
+import { SITE } from '../../config';
+import { ui, type Lang } from '../../i18n';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+---
+<Base lang={lang} title={t.about.title}>
+  <h1>{t.about.title}</h1>
+  <div class="prose">
+    <p>{SITE.text[lang].about}</p>
+    <div class="chips">
+      {SITE.stack.map((s) => <span class="chip-big">{s}</span>)}
+      {SITE.stackSecondary.map((s) => <span class="chip-big alt">{s}</span>)}
+      {SITE.stackBasic.map((s) => <span class="chip-big alt">{s} ({t.basic})</span>)}
+    </div>
+  </div>
+  <CtaBand lang={lang} />
+</Base>

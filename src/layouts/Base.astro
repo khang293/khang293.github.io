@@ -1,0 +1,102 @@
+---
+import '../styles/global.css';
+import { SITE } from '../config';
+import { ui, lp, altPath, type Lang } from '../i18n';
+
+interface Props { title?: string; description?: string; lang?: Lang; wide?: boolean; }
+const { title, description, lang = 'vi', wide = false } = Astro.props;
+const t = ui[lang];
+const desc = description || SITE.text[lang].description;
+const fullTitle = title ? `${title} · ${SITE.brand}` : `${SITE.brand} · ${SITE.text[lang].role}`;
+const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.site).href;
+const other: Lang = lang === 'vi' ? 'en' : 'vi';
+const otherHref = altPath(path, lang);
+
+const nav = [
+  ['/services/', t.nav.services],
+  ['/projects/', t.nav.projects],
+  ['/posts/', t.nav.blog],
+  ...(lang === 'vi' ? [['/journal/', t.nav.journal]] : []),
+  ['/about/', t.nav.about],
+] as [string, string][];
+const isOn = (href: string) => path.startsWith(lp(lang, href));
+const contactLinks = [
+  SITE.email && { label: SITE.email, href: `mailto:${SITE.email}` },
+  SITE.github && { label: 'GitHub', href: SITE.github },
+  SITE.linkedin && { label: 'LinkedIn', href: SITE.linkedin },
+  SITE.telegram && { label: 'Telegram', href: `https://t.me/${SITE.telegram}` },
+  SITE.zalo && { label: 'Zalo', href: SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}` },
+].filter(Boolean) as { label: string; href: string }[];
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />
+    <link rel="alternate" type="application/rss+xml" title={SITE.brand} href="/rss.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={t.locale.replace('-', '_')} />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💻</text></svg>" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap wide bar">
+        <a class="brand" href={lp(lang, '/')}><span>&lt;/&gt;</span> {SITE.brand}</a>
+        <nav aria-label="Main">
+          {nav.map(([href, label]) => <a href={lp(lang, href)} class={isOn(href) ? 'on' : ''}>{label}</a>)}
+        </nav>
+        <div class="bar-end">
+          <a class="lang" href={otherHref} hreflang={other} title={other === 'en' ? 'English' : 'Tiếng Việt'}>{other.toUpperCase()}</a>
+          <a class="btn sm" href={lp(lang, '/contact/')}>{t.nav.contact}</a>
+        </div>
+      </div>
+    </header>
+
+    <main class:list={['wrap', { wide }]}><slot /></main>
+
+    <footer class="site-footer">
+      <div class="wrap wide foot">
+        <div>
+          <strong>{SITE.brand}</strong>
+          <p>{SITE.text[lang].description}</p>
+        </div>
+        <div class="foot-links">
+          {nav.map(([href, label]) => <a href={lp(lang, href)}>{label}</a>)}
+          <a href={lp(lang, '/contact/')}>{t.nav.contact}</a>
+        </div>
+        {contactLinks.length > 0 && (
+          <div class="foot-links">
+            {contactLinks.map((c) => <a href={c.href} rel="noopener">{c.label}</a>)}
+          </div>
+        )}
+      </div>
+      <div class="wrap wide copy">
+        <p class="legal">{t.trademark}</p>
+        © {new Date().getFullYear()} {SITE.author} · <a href="/rss.xml">RSS</a>
+      </div>
+    </footer>
+
+    <script is:inline>
+      // Nút copy cho các khối code
+      document.querySelectorAll('pre').forEach((pre) => {
+        const btn = document.createElement('button');
+        btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copy';
+        btn.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(pre.innerText); btn.textContent = '✓'; }
+          catch { btn.textContent = '!'; }
+          setTimeout(() => (btn.textContent = 'Copy'), 1500);
+        });
+        pre.appendChild(btn);
+      });
+    </script>
+  </body>
+</html>

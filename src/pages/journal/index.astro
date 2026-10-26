@@ -1,0 +1,15 @@
+---
+import Base from '../../layouts/Base.astro';
+import EntryItem from '../../components/EntryItem.astro';
+import { getJournal } from '../../lib';
+const journal = await getJournal();
+---
+<Base title="Nhật ký">
+  <h1>Nhật ký</h1>
+  <p class="meta">Những gì mình làm và học được mỗi ngày.</p>
+  {journal.length ? (
+    <ul class="list timeline">
+      {journal.map((j) => <EntryItem href={`/journal/${j.id}/`} title={j.data.title} date={j.data.date} tags={j.data.tags} />)}
+    </ul>
+  ) : <p class="empty">Chưa có nhật ký nào.</p>}
+</Base>

@@ -1,0 +1,19 @@
+---
+import { fmtDate, tagSlug } from '../lib';
+import { ui, type Lang } from '../i18n';
+interface Props { href: string; title: string; date: Date; description?: string; tags?: string[]; minutes?: number; lang?: Lang; }
+const { href, title, date, description = '', tags = [], minutes, lang = 'vi' } = Astro.props;
+const t = ui[lang];
+---
+<li class="item">
+  <h3><a href={href}>{title}</a></h3>
+  <div class="meta">{fmtDate(date, t.locale)}{minutes ? ` · ${minutes} ${t.readingTime}` : ''}</div>
+  {description && <p>{description}</p>}
+  {tags.length > 0 && (
+    <span class="tags">
+      {tags.map((tag) => lang === 'vi'
+        ? <a class="tag" href={`/tags/${tagSlug(tag)}/`}>#{tag}</a>
+        : <span class="tag">#{tag}</span>)}
+    </span>
+  )}
+</li>
