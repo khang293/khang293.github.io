@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../config';
+---
+<Base title="Chính sách quyền riêng tư" description="Cách trang web này thu thập và sử dụng thông tin của bạn.">
+  <h1>Chính sách quyền riêng tư</h1>
+  <p class="meta">Cập nhật lần cuối: 26/10/2026</p>
+  <div class="prose">
+    <p>Trang web này là của cá nhân <strong>{SITE.author}</strong>. Trang này giải thích mình thu thập những thông tin nào khi bạn dùng web, và dùng chúng như thế nào.</p>
+
+    <h2>Thông tin bạn gửi qua form liên hệ</h2>
+    <p>Khi bạn dùng form liên hệ, mình nhận những thông tin bạn điền: họ tên, email, dịch vụ quan tâm, ngân sách và thời gian dự kiến (nếu có) và nội dung tin nhắn. Mình chỉ dùng chúng để <strong>phản hồi yêu cầu của bạn</strong> và trao đổi về công việc, không dùng để quảng cáo và không bán cho bên khác.</p>
+    <p>Form được vận hành bởi dịch vụ bên thứ ba là <a href="https://formspree.io" rel="noopener">Formspree</a>. Tin nhắn của bạn đi qua hệ thống của họ trước khi chuyển đến email của mình. Cách họ xử lý dữ liệu được nêu trong chính sách riêng của họ.</p>
+
+    <h2>Thông tin lưu trên thiết bị của bạn</h2>
+    <p>Web chỉ lưu một thiết lập nhỏ trên trình duyệt của bạn (lựa chọn giao diện sáng hoặc tối) để nhớ lại cho lần sau. Thiết lập này không được gửi đi đâu. Web hiện <strong>không dùng cookie theo dõi</strong> và không dùng công cụ thống kê truy cập.</p>
+
+    <h2>Máy chủ lưu trữ</h2>
+    <p>Web được lưu trữ trên GitHub Pages. Giống mọi máy chủ web, nhà cung cấp có thể ghi nhận các thông tin kỹ thuật cơ bản của lượt truy cập như địa chỉ IP, theo chính sách của họ.</p>
+
+    <h2>Thời gian lưu giữ và quyền của bạn</h2>
+    <p>Mình giữ tin nhắn trong thời gian cần thiết để trao đổi công việc. Bạn có thể yêu cầu xem, sửa hoặc xóa thông tin của mình bất cứ lúc nào bằng cách gửi email cho mình.</p>
+
+    <h2>Liên hệ</h2>
+    {SITE.email ? <p>Mọi câu hỏi về quyền riêng tư, vui lòng gửi email tới <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.</p> : <p>Vui lòng liên hệ qua trang <a href="/contact/">Liên hệ</a>.</p>}
+
+    <h2>Thay đổi chính sách</h2>
+    <p>Khi web thay đổi cách thu thập thông tin (ví dụ thêm công cụ thống kê), mình sẽ cập nhật trang này và ngày cập nhật ở đầu trang.</p>
+  </div>
+</Base>

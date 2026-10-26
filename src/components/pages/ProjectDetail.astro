@@ -18,7 +18,7 @@ const { Content } = await render(entry);
       {d.sample && <span class="badge">{t.sample}</span>}
       <h1>{d.title}</h1>
       <p class="lead">{d.summary}</p>
-      <div class="meta">{fmtDate(d.date, t.locale)}{d.role ? ` · ${t.role}: ${d.role}` : ''}</div>
+      <div class="meta">{[d.date && fmtDate(d.date, t.locale), d.role && `${t.role}: ${d.role}`].filter(Boolean).join(' · ')}</div>
       {d.url && <p><a class="btn sm" href={d.url} rel="noopener" target="_blank">{t.visit}</a></p>}
     </header>
     {d.stack.length > 0 && (

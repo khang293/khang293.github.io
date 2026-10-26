@@ -2,7 +2,6 @@
 lang: vi
 title: "Ứng dụng quản lý nhân sự: chấm công theo vị trí kèm ảnh và tính lương"
 summary: "Hệ thống quản lý nhân sự trên Power Platform: hồ sơ nhân viên, chấm công vào/ra theo vị trí kèm ảnh xác nhận, tính lương theo giờ làm, tăng ca và phụ cấp, phê duyệt và nhắc việc tự động, báo cáo Power BI."
-date: 2026-01-01
 icon: "👥"
 order: 4
 featured: true

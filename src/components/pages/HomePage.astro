@@ -21,7 +21,7 @@ const posts = (await getPosts(lang)).slice(0, 3);
 ---
 <Base wide lang={lang}>
   <section class="hero-big">
-    <p class="eyebrow">{text.role}</p>
+    <p class="eyebrow">{text.role} · {SITE.years} {t.yearsLabel}</p>
     <h1>{text.heroTitle}</h1>
     <p class="lead">{text.heroSub}</p>
     <div class="actions">
