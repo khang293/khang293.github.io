@@ -2,7 +2,6 @@
 lang: vi
 title: "Tự động hóa quy trình tiếp nhận nhân viên mới (Power Automate)"
 summary: "Bộ luồng Power Automate điều phối việc chuẩn bị cho nhân viên mới: thông báo đúng bộ phận, cấp máy tính, cấp email, cấp đồng phục, kèm phê duyệt cho từng lần cấp và nhắc việc khi chưa xử lý."
-date: 2026-02-01
 icon: "🧑‍💼"
 order: 5
 featured: true

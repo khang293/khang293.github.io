@@ -22,6 +22,11 @@ export function altPath(pathname: string, lang: Lang): string {
 export const ui = {
   vi: {
     locale: 'vi-VN',
+    themeToggle: 'Chuyển giao diện sáng hoặc tối',
+    privacy: 'Chính sách quyền riêng tư',
+    yearsLabel: 'năm kinh nghiệm',
+    zaloText: 'Nhắn qua Zalo',
+    zaloQr: 'Hoặc quét mã QR bằng ứng dụng Zalo trên điện thoại',
     trademark: 'Power Platform, Power Apps, Power Automate, Power BI, Dataverse, SharePoint và Microsoft Teams là nhãn hiệu của Microsoft Corporation. Trang này là của cá nhân, không liên kết hay được Microsoft bảo trợ.',
     nav: { services: 'Dịch vụ', projects: 'Dự án', blog: 'Blog', journal: 'Nhật ký', about: 'Giới thiệu', contact: 'Liên hệ' },
     getQuote: 'Nhận báo giá',
@@ -74,11 +79,11 @@ export const ui = {
     ],
     servicesPage: {
       title: 'Dịch vụ', sub: 'Giải pháp phần mềm được làm theo đúng nhu cầu của bạn.', faq: 'Câu hỏi thường gặp',
-      engageTitle: 'Cách hợp tác',
+      engageTitle: 'Gói dịch vụ và cách hợp tác', priceLabel: 'Giá tham khảo', priceOnRequest: 'Liên hệ báo giá', cta: 'Trao đổi gói này',
       engage: [
-        { t: 'Khảo sát & tư vấn', d: 'Tìm hiểu quy trình hiện tại, đề xuất giải pháp và lộ trình. Phù hợp khi bạn chưa rõ nên bắt đầu từ đâu.' },
-        { t: 'Xây dựng theo dự án', d: 'Thiết kế, phát triển, kiểm thử và bàn giao theo phạm vi đã thống nhất.' },
-        { t: 'Bảo trì & hỗ trợ', d: 'Sửa lỗi, điều chỉnh và hỗ trợ người dùng sau khi bàn giao.' },
+        { t: 'Khảo sát & tư vấn', d: 'Tìm hiểu quy trình hiện tại, đề xuất giải pháp và lộ trình. Phù hợp khi bạn chưa rõ nên bắt đầu từ đâu.', b: ['Buổi trao đổi để hiểu quy trình hiện tại', 'Đề xuất giải pháp và lộ trình', 'Báo giá chi tiết trước khi bắt đầu'] },
+        { t: 'Xây dựng theo dự án', d: 'Thiết kế, phát triển, kiểm thử và bàn giao theo phạm vi đã thống nhất.', b: ['Thiết kế và phát triển theo phạm vi đã thống nhất', 'Kiểm thử cùng bạn trước khi dùng thật', 'Bàn giao và hướng dẫn sử dụng'] },
+        { t: 'Bảo trì & hỗ trợ', d: 'Sửa lỗi, điều chỉnh và hỗ trợ người dùng sau khi bàn giao.', b: ['Sửa lỗi và điều chỉnh nhỏ', 'Hỗ trợ người dùng sau bàn giao', 'Phạm vi ghi rõ trong báo giá'] },
       ],
       engageNote: 'Chi phí tùy phạm vi công việc. Báo giá cụ thể được gửi sau khi trao đổi.',
     },
@@ -94,6 +99,10 @@ export const ui = {
     contact: {
       title: 'Liên hệ', sub: 'Mô tả ngắn gọn nhu cầu của bạn, mình sẽ phản hồi sớm.',
       name: 'Họ tên', email: 'Email', service: 'Bạn quan tâm đến', other: 'Khác / chưa rõ',
+      budget: 'Ngân sách dự kiến (không bắt buộc)', budgetHint: 'Ví dụ: 10 - 20 triệu, hoặc chưa xác định',
+      timeline: 'Thời gian mong muốn hoàn thành',
+      timelineOpts: ['Chưa xác định', 'Gấp (dưới 2 tuần)', '2 đến 4 tuần', '1 đến 3 tháng', 'Trên 3 tháng'],
+      consent: 'Khi gửi, bạn đồng ý để mình dùng thông tin này để phản hồi bạn. Xem',
       message: 'Nội dung', send: 'Gửi tin nhắn', direct: 'Hoặc liên hệ trực tiếp',
       notConfigured: 'Form liên hệ chưa được cấu hình. Vui lòng liên hệ qua các kênh bên dưới.',
     },
@@ -101,6 +110,11 @@ export const ui = {
   },
   en: {
     locale: 'en-US',
+    themeToggle: 'Switch between light and dark theme',
+    privacy: 'Privacy policy',
+    yearsLabel: 'years of experience',
+    zaloText: 'Message on Zalo',
+    zaloQr: 'Or scan the QR code with the Zalo app on your phone',
     trademark: 'Power Platform, Power Apps, Power Automate, Power BI, Dataverse, SharePoint and Microsoft Teams are trademarks of Microsoft Corporation. This is a personal website and is not affiliated with or endorsed by Microsoft.',
     nav: { services: 'Services', projects: 'Projects', blog: 'Blog', journal: 'Journal', about: 'About', contact: 'Contact' },
     getQuote: 'Get a quote',
@@ -153,11 +167,11 @@ export const ui = {
     ],
     servicesPage: {
       title: 'Services', sub: 'Software solutions built around what you actually need.', faq: 'Frequently asked questions',
-      engageTitle: 'How we can work together',
+      engageTitle: 'Packages and how we can work together', priceLabel: 'Reference price', priceOnRequest: 'Contact for a quote', cta: 'Discuss this package',
       engage: [
-        { t: 'Discovery & consulting', d: 'We study your current process and propose a solution and roadmap. A good fit when you are unsure where to start.' },
-        { t: 'Project build', d: 'Design, development, testing and handover within an agreed scope.' },
-        { t: 'Maintenance & support', d: 'Bug fixes, adjustments and user support after handover.' },
+        { t: 'Discovery & consulting', d: 'We study your current process and propose a solution and roadmap. A good fit when you are unsure where to start.', b: ['A session to understand your current process', 'A proposed solution and roadmap', 'A detailed quote before anything starts'] },
+        { t: 'Project build', d: 'Design, development, testing and handover within an agreed scope.', b: ['Design and development within the agreed scope', 'Testing together before real use', 'Handover and usage guidance'] },
+        { t: 'Maintenance & support', d: 'Bug fixes, adjustments and user support after handover.', b: ['Bug fixes and small adjustments', 'User support after handover', 'Scope stated clearly in the quote'] },
       ],
       engageNote: 'Cost depends on the scope of work. A specific quote is sent after we talk.',
     },
@@ -173,6 +187,10 @@ export const ui = {
     contact: {
       title: 'Contact', sub: 'Briefly describe what you need and I will get back to you soon.',
       name: 'Name', email: 'Email', service: 'Interested in', other: 'Other / not sure',
+      budget: 'Estimated budget (optional)', budgetHint: 'For example: 500 - 1,000 USD, or not sure yet',
+      timeline: 'Desired completion time',
+      timelineOpts: ['Not sure', 'Urgent (under 2 weeks)', '2 to 4 weeks', '1 to 3 months', 'More than 3 months'],
+      consent: 'By sending this form you agree that I may use this information to reply to you. See the',
       message: 'Message', send: 'Send message', direct: 'Or reach me directly',
       notConfigured: 'The contact form is not configured yet. Please use the channels below.',
     },

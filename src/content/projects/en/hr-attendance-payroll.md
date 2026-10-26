@@ -2,7 +2,6 @@
 lang: en
 title: "HR management app: location-based attendance with photos and payroll"
 summary: "An HR system on Power Platform: employee records, check-in/out by location with a confirmation photo, payroll from working hours, overtime and allowances, automated approvals and reminders, and Power BI reporting."
-date: 2026-01-01
 icon: "👥"
 order: 4
 featured: true

@@ -11,7 +11,7 @@ const c = t.contact;
 const services = await getServices(lang);
 const channels = [
   SITE.email && { label: 'Email', value: SITE.email, href: `mailto:${SITE.email}` },
-  SITE.zalo && { label: 'Zalo', value: SITE.zalo, href: SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}` },
+  SITE.zalo && { label: 'Zalo', value: t.zaloText, href: SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}` },
   SITE.telegram && { label: 'Telegram', value: `@${SITE.telegram}`, href: `https://t.me/${SITE.telegram}` },
   SITE.github && { label: 'GitHub', value: SITE.github.replace('https://', ''), href: SITE.github },
   SITE.linkedin && { label: 'LinkedIn', value: 'LinkedIn', href: SITE.linkedin },
@@ -34,7 +34,14 @@ const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
           <option value="other">{c.other}</option>
         </select>
       </label>
+      <label>{c.budget}<input name="budget" maxlength="80" placeholder={c.budgetHint} /></label>
+      <label>{c.timeline}
+        <select name="timeline">
+          {c.timelineOpts.map((o) => <option value={o}>{o}</option>)}
+        </select>
+      </label>
       <label>{c.message}<textarea name="message" rows="6" required maxlength="3000"></textarea></label>
+      <p class="consent">{c.consent} <a href={lp(lang, '/privacy/')}>{t.privacy}</a>.</p>
       <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="display:none" />
       <input type="hidden" name="_subject" value={`[${SITE.brand}] ${lang === 'vi' ? 'Liên hệ mới' : 'New inquiry'}`} />
       <input type="hidden" name="_next" value={thanks} />
@@ -50,6 +57,12 @@ const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
       <ul class="plain">
         {channels.map((ch) => <li><b>{ch.label}:</b> <a href={ch.href} rel="noopener">{ch.value}</a></li>)}
       </ul>
+      {SITE.zalo && (
+        <div class="qr">
+          <img src="/zalo-qr.jpg" alt="Zalo QR" width="160" height="160" loading="lazy" />
+          <p>{t.zaloQr}</p>
+        </div>
+      )}
     </section>
   )}
 

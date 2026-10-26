@@ -2,7 +2,6 @@
 lang: en
 title: "New-employee onboarding automation (Power Automate)"
 summary: "A set of Power Automate flows that coordinate preparing for a new employee: notifying the right teams, issuing a computer, an email account and a uniform, with an approval for each issuance and reminders when something is not handled."
-date: 2026-02-01
 icon: "🧑‍💼"
 order: 5
 featured: true

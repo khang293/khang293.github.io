@@ -4,7 +4,7 @@ import EntryItem from '../../components/EntryItem.astro';
 import { getJournal } from '../../lib';
 const journal = await getJournal();
 ---
-<Base title="Nhật ký">
+<Base title="Nhật ký" noindex={journal.length === 0}>
   <h1>Nhật ký</h1>
   <p class="meta">Những gì mình làm và học được mỗi ngày.</p>
   {journal.length ? (

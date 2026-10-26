@@ -2,7 +2,8 @@
 import Base from '../../layouts/Base.astro';
 import ServiceCard from '../ServiceCard.astro';
 import CtaBand from '../CtaBand.astro';
-import { ui, type Lang } from '../../i18n';
+import { SITE } from '../../config';
+import { ui, lp, type Lang } from '../../i18n';
 import { getServices } from '../../lib';
 
 interface Props { lang: Lang; }
@@ -17,8 +18,17 @@ const services = await getServices(lang);
   <section class="block">
     <div class="block-head"><h2>{t.servicesPage.engageTitle}</h2></div>
     <div class="grid">
-      {t.servicesPage.engage.map((x) => (
-        <div class="card static"><h3>{x.t}</h3><p>{x.d}</p></div>
+      {t.servicesPage.engage.map((x, i) => (
+        <div class="card static pkg">
+          <h3>{x.t}</h3>
+          <p>{x.d}</p>
+          <ul class="ticks">{x.b.map((b) => <li>{b}</li>)}</ul>
+          <div class="price">
+            <small>{t.servicesPage.priceLabel}</small>
+            <b>{SITE.packagePrices[lang][i] || t.servicesPage.priceOnRequest}</b>
+          </div>
+          <a class="btn sm" href={lp(lang, '/contact/')}>{t.servicesPage.cta}</a>
+        </div>
       ))}
     </div>
     <p class="meta engage-note">{t.servicesPage.engageNote}</p>

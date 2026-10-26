@@ -2,9 +2,10 @@
 import '../styles/global.css';
 import { SITE } from '../config';
 import { ui, lp, altPath, type Lang } from '../i18n';
+import { getJournal } from '../lib';
 
-interface Props { title?: string; description?: string; lang?: Lang; wide?: boolean; }
-const { title, description, lang = 'vi', wide = false } = Astro.props;
+interface Props { title?: string; description?: string; lang?: Lang; wide?: boolean; noindex?: boolean; }
+const { title, description, lang = 'vi', wide = false, noindex = false } = Astro.props;
 const t = ui[lang];
 const desc = description || SITE.text[lang].description;
 const fullTitle = title ? `${title} · ${SITE.brand}` : `${SITE.brand} · ${SITE.text[lang].role}`;
@@ -13,11 +14,15 @@ const canonical = new URL(path, Astro.site).href;
 const other: Lang = lang === 'vi' ? 'en' : 'vi';
 const otherHref = altPath(path, lang);
 
+// Mục Nhật ký chỉ hiện trên menu khi đã có ít nhất một bài
+const hasJournal = lang === 'vi' && (await getJournal()).length > 0;
+const ogImage = new URL('/og-image.png', Astro.site).href;
+
 const nav = [
   ['/services/', t.nav.services],
   ['/projects/', t.nav.projects],
   ['/posts/', t.nav.blog],
-  ...(lang === 'vi' ? [['/journal/', t.nav.journal]] : []),
+  ...(hasJournal ? [['/journal/', t.nav.journal]] : []),
   ['/about/', t.nav.about],
 ] as [string, string][];
 const isOn = (href: string) => path.startsWith(lp(lang, href));
@@ -36,6 +41,7 @@ const contactLinks = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="canonical" href={canonical} />
     <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />
     <link rel="alternate" type="application/rss+xml" title={SITE.brand} href="/rss.xml" />
@@ -44,7 +50,18 @@ const contactLinks = [
     <meta property="og:description" content={desc} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={t.locale.replace('-', '_')} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
+    <script is:inline>
+      // Áp dụng giao diện đã chọn trước khi trang hiện ra để tránh chớp màu
+      try {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) {}
+    </script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💻</text></svg>" />
   </head>
   <body>
@@ -55,6 +72,9 @@ const contactLinks = [
           {nav.map(([href, label]) => <a href={lp(lang, href)} class={isOn(href) ? 'on' : ''}>{label}</a>)}
         </nav>
         <div class="bar-end">
+          <button class="theme-btn" id="theme-toggle" type="button" aria-label={t.themeToggle} title={t.themeToggle}>
+            <span class="ic-moon" aria-hidden="true">🌙</span><span class="ic-sun" aria-hidden="true">☀️</span>
+          </button>
           <a class="lang" href={otherHref} hreflang={other} title={other === 'en' ? 'English' : 'Tiếng Việt'}>{other.toUpperCase()}</a>
           <a class="btn sm" href={lp(lang, '/contact/')}>{t.nav.contact}</a>
         </div>
@@ -81,10 +101,25 @@ const contactLinks = [
       </div>
       <div class="wrap wide copy">
         <p class="legal">{t.trademark}</p>
-        © {new Date().getFullYear()} {SITE.author} · <a href="/rss.xml">RSS</a>
+        © {new Date().getFullYear()} {SITE.author} · <a href={lp(lang, '/privacy/')}>{t.privacy}</a>
       </div>
     </footer>
 
+    <script is:inline>
+      // Nút chuyển sáng / tối: mặc định theo hệ thống, chọn tay thì nhớ lại
+      (function () {
+        var root = document.documentElement;
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        var btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        function effective() { return root.getAttribute('data-theme') || (mq.matches ? 'dark' : 'light'); }
+        btn.addEventListener('click', function () {
+          var next = effective() === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (e) {}
+        });
+      })();
+    </script>
     <script is:inline>
       // Nút copy cho các khối code
       document.querySelectorAll('pre').forEach((pre) => {

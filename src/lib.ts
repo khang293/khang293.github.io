@@ -23,7 +23,7 @@ export async function getProjects(lang: Lang) {
     (a, b) =>
       Number(a.data.sample) - Number(b.data.sample) ||
       a.data.order - b.data.order ||
-      +b.data.date - +a.data.date,
+      (+(b.data.date ?? 0)) - (+(a.data.date ?? 0)),
   );
 }
 

@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config';
+---
+<Base lang="en" title="Privacy policy" description="How this website collects and uses your information.">
+  <h1>Privacy policy</h1>
+  <p class="meta">Last updated: 26 October 2026</p>
+  <div class="prose">
+    <p>This is the personal website of <strong>{SITE.author}</strong>. This page explains what information I collect when you use the site and how I use it.</p>
+
+    <h2>Information you send through the contact form</h2>
+    <p>When you use the contact form I receive what you fill in: your name, email, the service you are interested in, your budget and timeline (if provided) and your message. I use it only to <strong>reply to your enquiry</strong> and discuss the work. I do not use it for advertising and I do not sell it.</p>
+    <p>The form is run by a third-party service, <a href="https://formspree.io" rel="noopener">Formspree</a>. Your message passes through their systems before it reaches my email. How they handle data is described in their own policy.</p>
+
+    <h2>Information stored on your device</h2>
+    <p>The site stores one small setting in your browser (your light or dark theme choice) so it can remember it next time. It is not sent anywhere. The site currently <strong>does not use tracking cookies</strong> or analytics tools.</p>
+
+    <h2>Hosting</h2>
+    <p>The site is hosted on GitHub Pages. As with any web host, the provider may record basic technical details of visits, such as IP addresses, under its own policy.</p>
+
+    <h2>Retention and your rights</h2>
+    <p>I keep messages for as long as needed to discuss the work. You can ask to see, correct or delete your information at any time by emailing me.</p>
+
+    <h2>Contact</h2>
+    {SITE.email ? <p>For any privacy question, please email <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.</p> : <p>Please reach out through the <a href="/en/contact/">Contact</a> page.</p>}
+
+    <h2>Changes to this policy</h2>
+    <p>If the site changes how it collects information (for example by adding analytics), I will update this page and the date at the top.</p>
+  </div>
+</Base>

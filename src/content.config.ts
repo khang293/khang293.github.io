@@ -46,7 +46,7 @@ const projects = defineCollection({
     lang,
     title: z.string(),
     summary: z.string(),
-    date: z.coerce.date(),
+    date: z.coerce.date().optional(), // có thể bỏ trống, khi đó trang không hiện ngày
     icon: z.string().default('🚀'),
     order: z.number().default(50), // số nhỏ hiện trước; cùng số thì mới nhất lên trên
     tags: z.array(z.string()).default([]),
