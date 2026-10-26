@@ -5,3 +5,6 @@ dist/
 
 # Local Netlify folder
 .netlify
+
+# Tài liệu đọc riêng, không đưa lên GitHub
+TAI_LIEU_SOURCE_CODE.md
