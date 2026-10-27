@@ -8,6 +8,7 @@ featured: true
 sample: false
 role: "Design & development"
 stack: ["Power Automate", "Microsoft 365"]
+flow: ["A new employee is added", "Each team is notified", "Each item is approved", "Items are issued", "Reminder if not handled"]
 results:
   - "Automatic notifications to the right teams when a new employee is added, instead of messaging each one by hand"
   - "Every computer, email or uniform issuance goes through a clear approval step"
@@ -26,13 +27,6 @@ I built a set of **Power Automate** flows that follow the new-employee onboardin
 - **Items to issue**: computer, email account, uniform and related supplies.
 - **Approval for each issuance**: every item goes through an approval step before it is fulfilled.
 - **Reminders** when an item has not been handled.
-
-## The general flow
-
-1. A new employee is added: the flow records it and notifies each team.
-2. Each team receives the issuance request that belongs to its part.
-3. The request goes through an approval step; approvers act right from the email or notification.
-4. Once approved, the item is issued, and anything still pending triggers a reminder.
 
 ## Highlights
 

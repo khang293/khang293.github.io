@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Power Apps design & development"
 stack: ["Power Apps", "Power Fx", "SharePoint", "Microsoft 365"]
+flow: ["Draft from a template", "Submit for approval", "Configurable approval with delegation", "Sign and store the final copy", "Search and track"]
 results:
   - "Brought contracts and related documents into one system instead of email and scattered files"
   - "Configurable approvals with delegation and approval history"

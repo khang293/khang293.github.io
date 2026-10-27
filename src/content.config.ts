@@ -53,6 +53,7 @@ const projects = defineCollection({
     stack: z.array(z.string()).default([]),
     role: z.string().optional(),
     results: z.array(z.string()).default([]),
+    flow: z.array(z.string()).default([]), // các bước của quy trình, hiện thành sơ đồ trên trang dự án
     url: z.string().url().optional(),
     featured: z.boolean().default(false),
     sample: z.boolean().default(false),

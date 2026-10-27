@@ -8,6 +8,7 @@ featured: true
 sample: false
 role: "Thiết kế & phát triển"
 stack: ["Power Apps", "Power Automate", "SharePoint", "Power BI"]
+flow: ["Chấm công vào/ra, ghi vị trí và ảnh", "Lưu dữ liệu tập trung", "Phê duyệt trường hợp cần xác nhận", "Tính lương theo quy tắc", "Báo cáo Power BI"]
 results:
   - "Chấm công vào/ra theo vị trí kèm ảnh, lưu lại làm bằng chứng thay cho việc chấm tay hoặc ghi sổ"
   - "Tính lương tự động theo giờ làm, tăng ca và phụ cấp, giảm việc tổng hợp thủ công cuối tháng"
@@ -28,13 +29,6 @@ Hệ thống xây dựng trên Power Platform: **Power Apps** làm giao diện, 
 - **Tính lương theo quy tắc**: tự tính từ dữ liệu chấm công dựa trên giờ làm, tăng ca, phụ cấp và các khoản liên quan.
 - **Phê duyệt và nhắc việc tự động**: Power Automate xử lý các luồng duyệt và gửi nhắc nhở đến đúng người, đúng lúc.
 - **Báo cáo**: dashboard Power BI cho người quản lý theo dõi chấm công và chi phí nhân sự.
-
-## Quy trình tổng quát
-
-1. Nhân viên mở ứng dụng, chấm công vào hoặc ra: hệ thống ghi vị trí, thời gian và ảnh.
-2. Dữ liệu chấm công được lưu tập trung, các trường hợp cần xác nhận được chuyển đi phê duyệt.
-3. Cuối kỳ, luồng tự tính lương theo quy tắc giờ làm, tăng ca và phụ cấp.
-4. Người quản lý xem báo cáo và theo dõi trên Power BI.
 
 ## Điểm đáng chú ý
 

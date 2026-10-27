@@ -13,7 +13,12 @@ import { SITE } from '../config';
     <p>Form được vận hành bởi dịch vụ bên thứ ba là <a href="https://formspree.io" rel="noopener">Formspree</a>. Tin nhắn của bạn đi qua hệ thống của họ trước khi chuyển đến email của mình. Cách họ xử lý dữ liệu được nêu trong chính sách riêng của họ.</p>
 
     <h2>Thông tin lưu trên thiết bị của bạn</h2>
-    <p>Web chỉ lưu một thiết lập nhỏ trên trình duyệt của bạn (lựa chọn giao diện sáng hoặc tối) để nhớ lại cho lần sau. Thiết lập này không được gửi đi đâu. Web hiện <strong>không dùng cookie theo dõi</strong> và không dùng công cụ thống kê truy cập.</p>
+    <p>Web chỉ lưu một thiết lập nhỏ trên trình duyệt của bạn (lựa chọn giao diện sáng hoặc tối) để nhớ lại cho lần sau. Thiết lập này không được gửi đi đâu.</p>
+    {SITE.analytics.id ? (
+      <p>Để biết có bao nhiêu người ghé web và đọc trang nào, web dùng công cụ thống kê <strong>{SITE.analytics.provider === 'cloudflare' ? 'Cloudflare Web Analytics' : SITE.analytics.provider === 'goatcounter' ? 'GoatCounter' : 'Plausible'}</strong>. Theo mô tả của nhà cung cấp, công cụ này không dùng cookie theo dõi và chỉ ghi nhận số liệu tổng hợp, không dựng hồ sơ cá nhân của bạn. Mình dùng số liệu này để cải thiện nội dung web.</p>
+    ) : (
+      <p>Web hiện <strong>không dùng cookie theo dõi</strong> và không dùng công cụ thống kê truy cập.</p>
+    )}
 
     <h2>Máy chủ lưu trữ</h2>
     <p>Web được lưu trữ trên GitHub Pages. Giống mọi máy chủ web, nhà cung cấp có thể ghi nhận các thông tin kỹ thuật cơ bản của lượt truy cập như địa chỉ IP, theo chính sách của họ.</p>

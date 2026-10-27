@@ -1,0 +1,52 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config';
+import { ui, lp, type Lang } from '../../i18n';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const h = t.how;
+const zalo = SITE.zalo ? (SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}`) : '';
+---
+<Base lang={lang} title={h.title} description={h.sub}>
+  <h1>{h.title}</h1>
+  <p class="meta">{h.sub}</p>
+
+  <section class="block">
+    <div class="block-head"><h2>{h.stepsTitle}</h2></div>
+    <ol class="how-steps">
+      {h.steps.map((s, i) => (
+        <li>
+          <b>{i + 1}</b>
+          <div>
+            <h3>{s.t} <small>{s.time}</small></h3>
+            <p>{s.d}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <p class="meta">{h.timeNote}</p>
+  </section>
+
+  <div class="how-cols">
+    <section class="panel">
+      <h2>{h.prepareTitle}</h2>
+      <ul class="ticks">{h.prepare.map((x) => <li>{x}</li>)}</ul>
+    </section>
+    <section class="panel">
+      <h2>{h.payTitle}</h2>
+      <ul class="ticks">{h.pay.map((x) => <li>{x}</li>)}</ul>
+    </section>
+    <section class="panel">
+      <h2>{h.safeTitle}</h2>
+      <ul class="ticks">{h.safe.map((x) => <li>{x}</li>)}</ul>
+    </section>
+  </div>
+
+  <div class="cta-actions left how-cta">
+    <a class="btn" href={lp(lang, '/contact/')}>{h.cta}</a>
+    {zalo && <a class="btn ghost" href={zalo} target="_blank" rel="noopener">{t.chatZalo}</a>}
+    <a class="btn ghost" href={t.profile.file} download>{t.profile.download}</a>
+  </div>
+</Base>

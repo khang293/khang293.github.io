@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import ServiceCard from '../ServiceCard.astro';
 import CtaBand from '../CtaBand.astro';
+import CalcTeaser from '../CalcTeaser.astro';
 import { SITE } from '../../config';
 import { ui, lp, type Lang } from '../../i18n';
 import { getServices } from '../../lib';
@@ -32,7 +33,13 @@ const services = await getServices(lang);
       ))}
     </div>
     <p class="meta engage-note">{t.servicesPage.engageNote}</p>
+    <div class="cta-actions left engage-links">
+      <a class="btn ghost" href={lp(lang, '/how-we-work/')}>{t.howLink}</a>
+      <a class="btn ghost" href={t.profile.file} download>{t.profile.download}</a>
+    </div>
   </section>
+
+  <CalcTeaser lang={lang} />
 
   <section class="block narrow">
     <div class="block-head"><h2>{t.servicesPage.faq}</h2></div>

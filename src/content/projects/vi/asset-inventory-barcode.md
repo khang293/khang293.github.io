@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Thiết kế & phát triển"
 stack: ["Power Apps", "Power Automate", "SharePoint", "Power BI", "Microsoft 365"]
+flow: ["Chuẩn bị danh sách tài sản theo kỳ", "Quét mã vạch và nhập số đếm", "Tự so sánh với số liệu hệ thống", "Phê duyệt nhiều cấp", "Báo cáo Power BI cập nhật"]
 results:
   - "Số hóa kiểm kê tài sản định kỳ bằng quét mã vạch, tự so sánh với số liệu hệ thống và ghi nhận chênh lệch"
   - "Quản lý ảnh tài sản và các yêu cầu thay đổi, có phê duyệt nhiều cấp"
@@ -27,13 +28,6 @@ Một bộ giải pháp Power Platform gồm nhiều ứng dụng và luồng t�
 - **Ứng dụng phê duyệt trên máy tính**: người duyệt xem kết quả kiểm kê (số đếm so với số hệ thống, chênh lệch, ghi chú) rồi duyệt hoặc từ chối.
 - **Ứng dụng quản trị**: quản lý người dùng và vai trò, mở hoặc đóng kỳ kiểm kê, cấu hình, sinh mã vạch và nhúng báo cáo Power BI.
 - **Các luồng Power Automate**: tạo danh sách tài sản cần đếm, nhận kết quả, tự so sánh số đếm với số hệ thống, chuyển cấp phê duyệt, gửi email thông báo, ghi log và làm mới báo cáo.
-
-## Quy trình tổng quát
-
-1. Chuẩn bị danh sách tài sản cần kiểm kê cho từng kỳ.
-2. Người kiểm kê quét mã vạch bằng điện thoại, nhập số đếm, thêm ảnh và ghi chú nếu cần.
-3. Hệ thống tự so sánh số đếm với số liệu hệ thống và ghi nhận chênh lệch.
-4. Kết quả đi qua phê duyệt nhiều cấp, rồi báo cáo được làm mới.
 
 ## Điểm đáng chú ý
 

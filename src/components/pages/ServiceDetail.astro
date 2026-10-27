@@ -3,6 +3,8 @@ import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import CtaBand from '../CtaBand.astro';
 import { ui, lp, type Lang } from '../../i18n';
+import { slugOf } from '../../lib';
+import { serviceSchema } from '../../schema';
 
 interface Props { lang: Lang; entry: any; }
 const { lang, entry } = Astro.props;
@@ -10,7 +12,7 @@ const t = ui[lang];
 const d = entry.data;
 const { Content } = await render(entry);
 ---
-<Base lang={lang} title={d.title} description={d.summary}>
+<Base lang={lang} title={d.title} description={d.summary} schema={serviceSchema(lang, { title: d.title, summary: d.summary }, lp(lang, `/services/${slugOf(entry.id)}/`))}>
   <article class="article">
     <header>
       <div class="hero-ico">{d.icon}</div>

@@ -4,22 +4,26 @@ import ServiceCard from '../ServiceCard.astro';
 import ProjectCard from '../ProjectCard.astro';
 import EntryItem from '../EntryItem.astro';
 import CtaBand from '../CtaBand.astro';
+import CalcTeaser from '../CalcTeaser.astro';
+import Testimonials from '../Testimonials.astro';
 import { SITE } from '../../config';
 import { ui, lp, type Lang } from '../../i18n';
 import { getServices, getProjects, getPosts, readingTime } from '../../lib';
+import { personSchema, websiteSchema, professionalServiceSchema } from '../../schema';
 
 interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = ui[lang];
 const text = SITE.text[lang];
 
-const services = (await getServices(lang)).slice(0, 4);
+const allServices = await getServices(lang);
+const services = allServices.slice(0, 4);
 const allProjects = await getProjects(lang);
 const featured = allProjects.filter((p) => p.data.featured);
 const projects = (featured.length ? featured : allProjects).slice(0, 3);
 const posts = (await getPosts(lang)).slice(0, 3);
 ---
-<Base wide lang={lang}>
+<Base wide lang={lang} schema={[personSchema(lang), websiteSchema(lang), professionalServiceSchema(lang, allServices.map((s) => ({ title: s.data.title, summary: s.data.summary })))]}>
   <section class="hero-big">
     <p class="eyebrow">{text.role} · {SITE.years} {t.yearsLabel}</p>
     <h1>{text.heroTitle}</h1>
@@ -71,7 +75,12 @@ const posts = (await getPosts(lang)).slice(0, 3);
     <ol class="steps">
       {t.process.map((s, i) => <li><b>{i + 1}</b><h3>{s.t}</h3><p>{s.d}</p></li>)}
     </ol>
+    <p class="more-link"><a href={lp(lang, '/how-we-work/')}>{t.howLink} →</a></p>
   </section>
+
+  <Testimonials lang={lang} />
+
+  <CalcTeaser lang={lang} />
 
   <CtaBand lang={lang} />
 

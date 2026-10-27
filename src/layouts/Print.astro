@@ -1,0 +1,16 @@
+---
+// Khung tối giản cho trang dùng để in ra PDF: nền sáng cố định, không có menu hay chân trang.
+import '../styles/global.css';
+interface Props { title: string; lang: 'vi' | 'en'; }
+const { title, lang } = Astro.props;
+---
+<!doctype html>
+<html lang={lang} data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{title}</title>
+  </head>
+  <body class="print-body"><slot /></body>
+</html>

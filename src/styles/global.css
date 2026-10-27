@@ -172,3 +172,69 @@ pre:hover .copy,.copy:focus{opacity:1}
 .qr{display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap}
 .qr img{border-radius:12px;border:1px solid var(--line);background:#fff}
 .qr p{margin:0;color:var(--muted);font-size:.9rem;max-width:280px}
+.fail{background:color-mix(in srgb,#ef4444 14%,transparent);padding:12px 16px;border-radius:12px;font-weight:600}
+
+/* Nút Zalo nổi, nút đặt lịch */
+.float-zalo{position:fixed;right:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:8px;background:#0068ff;color:#fff;padding:11px 18px;border-radius:999px;font-weight:700;box-shadow:0 6px 20px rgba(0,104,255,.38);line-height:1}
+.float-zalo:hover{text-decoration:none;filter:brightness(1.08)}
+.float-zalo b{font-size:.92rem}
+.site-footer{padding-bottom:70px}
+@media(max-width:340px){.float-zalo b{display:none}}
+@media print{.float-zalo{display:none}}
+.cta-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn.outline-light{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.75)}
+.btn.outline-light:hover{background:rgba(255,255,255,.14)}
+@media(max-width:480px){.eyebrow{font-size:.72rem;letter-spacing:.04em}}
+
+/* Sơ đồ quy trình, công cụ tính, nhận xét, chứng chỉ */
+.flow{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+.flow li{position:relative;flex:1 1 112px;min-width:108px;display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 14px 14px;font-size:.92rem;line-height:1.4}
+.flow li b{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:.85rem}
+@media(min-width:760px){.flow li:not(:last-child)::after{content:"→";position:absolute;right:-14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700;z-index:1;background:var(--card);border-radius:50%;width:18px;text-align:center}}
+@media(max-width:759px){.flow{flex-direction:column}.flow li{flex:0 0 auto;flex-direction:row;align-items:center;gap:12px}.flow li:not(:last-child)::after{content:"↓";position:absolute;left:21px;bottom:-14px;color:var(--muted);font-weight:700;z-index:1;background:var(--card);width:18px;text-align:center}}
+
+.teaser{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 26px}
+.teaser h2{margin:0 0 4px;font-size:1.25rem}
+.teaser p{margin:0;color:var(--muted)}
+
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px;align-items:start}
+@media(max-width:800px){.calc{grid-template-columns:1fr}}
+.calc-in{margin-top:0;max-width:none}
+.calc-out{margin:0;padding-bottom:22px}
+.calc-out dl{margin:0;display:grid;gap:12px}
+.calc-out dl div{display:flex;justify-content:space-between;gap:12px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:10px}
+.calc-out dt{color:var(--muted)}
+.calc-out dd{margin:0;font-weight:800;font-size:1.25rem;text-align:right;white-space:nowrap}
+.calc-out dd.dim{font-size:.9rem;font-weight:500;color:var(--muted);white-space:normal}
+.calc-out dl div{flex-wrap:wrap}
+.calc-note{margin:14px 0}
+.calc input[type=range]{padding:0;accent-color:var(--accent)}
+
+.quote{margin:0;gap:12px}
+.quote blockquote{margin:0;font-size:1.02rem;line-height:1.6}
+.quote blockquote::before{content:"“";color:var(--accent);font-size:1.6rem;line-height:0;margin-right:2px}
+.quote figcaption{display:flex;flex-direction:column}
+.certs li{display:flex;flex-direction:column;padding:8px 0;border-bottom:1px solid var(--line)}
+.certs li:last-child{border-bottom:0}
+
+/* Khối kêu gọi cuối bài, bài liên quan, trang Cách làm việc */
+.post-cta{margin-top:40px;padding:24px 26px;border-radius:18px;color:#fff;background:linear-gradient(120deg,#4f46e5,#0ea5e9)}
+.post-cta h2{margin:0 0 6px;font-size:1.3rem}
+.post-cta p{margin:0 0 16px;opacity:.95}
+.post-cta .btn{background:#fff;color:#312e81}
+.post-cta .btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.75)}
+.post-cta .btn.ghost:hover{background:rgba(255,255,255,.14);color:#fff}
+.cta-actions.left{justify-content:flex-start}
+.related{margin-top:34px}
+.related h2{font-size:1.15rem;margin:0 0 4px}
+.engage-links{margin-top:14px}
+.more-link{margin:14px 0 0}
+.how-steps{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:12px}
+.how-steps li{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.how-steps li>b{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--on-accent)}
+.how-steps h3{margin:0 0 2px;font-size:1.05rem}
+.how-steps h3 small{margin-left:8px;font-weight:600;color:var(--accent);font-size:.78rem}
+.how-steps p{margin:0;color:var(--muted);font-size:.95rem}
+.how-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:8px}
+.how-cols .panel{margin:0}
+.how-cta{margin-top:26px}

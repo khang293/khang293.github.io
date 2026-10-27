@@ -7,6 +7,7 @@ import { ui, type Lang } from '../../i18n';
 interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = ui[lang];
+const certs = SITE.certifications;
 ---
 <Base lang={lang} title={t.about.title}>
   <h1>{t.about.title}</h1>
@@ -18,5 +19,20 @@ const t = ui[lang];
       {SITE.stackBasic.map((s) => <span class="chip-big alt">{s} ({t.basic})</span>)}
     </div>
   </div>
+
+  {certs.length > 0 && (
+    <section class="panel">
+      <h2>{t.certsTitle}</h2>
+      <ul class="plain certs">
+        {certs.map((c) => (
+          <li>
+            <b>{c.url ? <a href={c.url} rel="noopener" target="_blank">{c.name}</a> : c.name}</b>
+            <small>{[c.issuer, c.year].filter(Boolean).join(' · ')}</small>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
   <CtaBand lang={lang} />
 </Base>

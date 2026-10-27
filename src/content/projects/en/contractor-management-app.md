@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Power Apps design & development"
 stack: ["Power Apps", "Power Fx", "Power Automate", "SharePoint"]
+flow: ["Submission arrives from the portal", "Approvers are assigned", "Several approvers, rejection with a reason", "Approval history is recorded", "Result notification"]
 results:
   - "Extended contractor submission approval from a single approver to several approvers, with approval history"
   - "Added approver delegation, keeping the desktop and mobile versions in sync"
