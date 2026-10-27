@@ -19,7 +19,6 @@ export const SITE = {
   // Mã xác minh chủ web của Google Search Console (phần sau content= của thẻ meta), mỗi tài khoản một mã.
   // Có thể để nhiều mã cùng lúc. Để trống [] = không thêm thẻ nào.
   googleVerification: [
-    '0RTzsrnLUyqbLTpTYm2-CDoWAzMnsCCd__8JI6xgtdw', // tài khoản đầu tiên
     'Em8EyAtn6cFVuccJUNRFwYnegwEaE1Mo_jjpZ44OCPQ', // tài khoản chính
   ],
 
