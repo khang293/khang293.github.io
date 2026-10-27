@@ -1,0 +1,128 @@
+---
+import Print from '../../layouts/Print.astro';
+import { SITE } from '../../config';
+import { ui, type Lang } from '../../i18n';
+import { getServices, getProjects } from '../../lib';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const p = t.profile;
+const services = await getServices(lang);
+const projects = await getProjects(lang);
+const prices = SITE.packagePrices[lang];
+const site = SITE.url.replace('https://', '');
+const zalo = SITE.zalo ? (SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}`) : '';
+const certs = SITE.certifications;
+// Bản PDF gửi cho khách: bỏ câu nhắc đến blog trong phần giới thiệu
+const intro = SITE.text[lang].about.split(/(?<=[.!?])\s+/).filter((s) => !/blog/i.test(s)).join(' ');
+const now = new Date();
+const updated = now.toLocaleDateString(t.locale, { month: '2-digit', year: 'numeric' });
+---
+<Print title={`${p.title} · ${SITE.author}`} lang={lang}>
+  <main class="pf">
+    <header class="pf-head">
+      <div>
+        <h1>{SITE.author}</h1>
+        <p class="pf-role">{SITE.text[lang].role} · {SITE.years} {t.yearsLabel}</p>
+      </div>
+      <ul class="pf-contact">
+        {SITE.email && <li><a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>}
+        {zalo && <li>Zalo: <a href={zalo}>{zalo.replace('https://', '')}</a></li>}
+        <li><a href={SITE.url}>{site}</a></li>
+      </ul>
+    </header>
+
+    <section>
+      <h2>{p.intro}</h2>
+      <p>{intro}</p>
+    </section>
+
+    <section>
+      <h2>{p.services}</h2>
+      <ul class="pf-cols">
+        {services.map((s) => <li><b>{s.data.icon} {s.data.title}</b><span>{s.data.summary}</span></li>)}
+      </ul>
+    </section>
+
+    <section>
+      <h2>{p.packages}</h2>
+      <table class="pf-table">
+        <tbody>
+          {t.servicesPage.engage.map((x, i) => (
+            <tr>
+              <td><b>{x.t}</b><br /><span>{x.b.join(' · ')}</span></td>
+              <td class="pf-price">{prices[i] || t.servicesPage.priceOnRequest}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="pf-small">{t.servicesPage.engageNote}</p>
+    </section>
+
+    <section>
+      <h2>{p.projects} <small>{p.projectsNote}</small></h2>
+      <ul class="pf-projects">
+        {projects.map((x) => (
+          <li>
+            <b>{x.data.icon} {x.data.title}</b>
+            <span>{x.data.summary}</span>
+            <em>{x.data.stack.join(' · ')}</em>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="pf-two">
+      <div>
+        <h2>{t.stack}</h2>
+        <p>{[...SITE.stack, ...SITE.stackSecondary, ...SITE.stackBasic.map((s) => `${s} (${t.basic})`)].join(' · ')}</p>
+        {certs.length > 0 && (
+          <>
+            <h2>{t.certsTitle}</h2>
+            <ul class="pf-list">{certs.map((c) => <li>{c.name}{[c.issuer, c.year].filter(Boolean).length > 0 && ` (${[c.issuer, c.year].filter(Boolean).join(', ')})`}</li>)}</ul>
+          </>
+        )}
+      </div>
+      <div>
+        <h2>{p.process}</h2>
+        <ol class="pf-list">{t.process.map((s) => <li><b>{s.t}.</b> {s.d}</li>)}</ol>
+      </div>
+    </section>
+
+    <footer class="pf-foot">
+      <span>{p.updated} {updated} · {site}</span>
+      <span>{t.trademark}</span>
+    </footer>
+  </main>
+</Print>
+
+<style>
+  @page { size: A4; margin: 12mm 13mm; }
+  :global(.print-body) { background: #fff; color: #1c2230; font-size: 10pt; line-height: 1.45; }
+  .pf { max-width: 190mm; margin: 0 auto; padding: 0; }
+  .pf h1 { font-size: 22pt; margin: 0; letter-spacing: -.5px; }
+  .pf h2 { font-size: 11.5pt; margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #4f46e5; color: #312e81; break-after: avoid; }
+  .pf h2 small { font-weight: 400; color: #667085; font-size: 9pt; margin-left: 6px; }
+  .pf p { margin: 0 0 4px; }
+  .pf-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 3px solid #4f46e5; padding-bottom: 8px; }
+  .pf-role { color: #4f46e5; font-weight: 700; margin: 2px 0 0; font-size: 11pt; }
+  .pf-contact { list-style: none; margin: 0; padding: 0; text-align: right; font-size: 9pt; color: #344054; }
+  .pf a { color: #344054; text-decoration: none; }
+  .pf-cols { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 14px; }
+  .pf-cols li { break-inside: avoid; margin-bottom: 6px; display: flex; flex-direction: column; }
+  .pf-cols span, .pf-projects span { color: #475467; font-size: 9pt; }
+  .pf-table { width: 100%; border-collapse: collapse; }
+  .pf-table td { border-bottom: 1px solid #e4e7ec; padding: 5px 4px; vertical-align: top; }
+  .pf-table td span { color: #475467; font-size: 8.5pt; }
+  .pf-price { text-align: right; font-weight: 700; white-space: nowrap; width: 38%; }
+  .pf-small { font-size: 8.5pt; color: #667085; margin-top: 4px; }
+  .pf-projects { list-style: none; margin: 0; padding: 0; }
+  .pf-projects li { break-inside: avoid; margin-bottom: 7px; display: flex; flex-direction: column; }
+  .pf-projects em { color: #4f46e5; font-style: normal; font-size: 8.5pt; }
+  .pf-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; break-inside: avoid; }
+  .pf-list { margin: 0; padding-left: 16px; font-size: 9pt; }
+  .pf-list li { margin-bottom: 2px; }
+  .pf-foot { margin-top: 14px; padding-top: 6px; border-top: 1px solid #e4e7ec; font-size: 7.5pt; color: #667085; display: flex; flex-direction: column; gap: 2px; }
+  @media screen { .pf { padding: 24px; } }
+</style>

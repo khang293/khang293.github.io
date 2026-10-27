@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Thiết kế & phát triển Power Apps"
 stack: ["Power Apps", "Power Fx", "SharePoint", "Microsoft 365"]
+flow: ["Soạn từ mẫu", "Gửi phê duyệt", "Duyệt theo cấu hình, có ủy quyền", "Ký và lưu bản chính thức", "Tra cứu và theo dõi"]
 results:
   - "Gom hợp đồng và các tài liệu liên quan vào một hệ thống thay cho email và file rời"
   - "Phê duyệt theo cấu hình, có ủy quyền và lịch sử phê duyệt"

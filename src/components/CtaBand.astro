@@ -1,4 +1,5 @@
 ---
+import { SITE } from '../config';
 import { lp, ui, type Lang } from '../i18n';
 interface Props { lang: Lang; }
 const { lang } = Astro.props;
@@ -7,5 +8,8 @@ const t = ui[lang];
 <section class="cta-band">
   <h2>{t.home.ctaTitle}</h2>
   <p>{t.home.ctaText}</p>
-  <a class="btn light" href={lp(lang, '/contact/')}>{t.getQuote}</a>
+  <div class="cta-actions">
+    <a class="btn light" href={lp(lang, '/contact/')}>{t.getQuote}</a>
+    {SITE.booking && <a class="btn outline-light" href={SITE.booking} target="_blank" rel="noopener">{t.bookCall}</a>}
+  </div>
 </section>

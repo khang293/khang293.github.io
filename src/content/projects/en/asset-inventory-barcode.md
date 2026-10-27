@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Design & development"
 stack: ["Power Apps", "Power Automate", "SharePoint", "Power BI", "Microsoft 365"]
+flow: ["Prepare the asset list for the period", "Scan barcodes and enter counts", "Automatic comparison with system data", "Multi-level approval", "Power BI report refreshes"]
 results:
   - "Digitized periodic asset stocktaking with barcode scanning, automatic comparison against system data and variance recording"
   - "Asset photos and change requests managed with multi-level approval"
@@ -27,13 +28,6 @@ A Power Platform solution made of several apps and automated flows:
 - **Desktop approval app**: approvers review stocktake results (counted vs system quantities, variances, notes) and approve or reject.
 - **Admin app**: manage users and roles, open or close stocktake periods, configure settings, generate barcodes and embed a Power BI report.
 - **Power Automate flows**: build the list of assets to count, receive results, automatically compare counted and system quantities, move requests through approval levels, send email notifications, write logs and refresh the report.
-
-## The general process
-
-1. Prepare the list of assets to count for each period.
-2. Counters scan barcodes on their phone, enter counts, and add a photo and a note when needed.
-3. The system automatically compares counts with system data and records variances.
-4. Results go through multi-level approval, then the report refreshes.
 
 ## Highlights
 

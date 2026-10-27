@@ -13,7 +13,12 @@ import { SITE } from '../../config';
     <p>The form is run by a third-party service, <a href="https://formspree.io" rel="noopener">Formspree</a>. Your message passes through their systems before it reaches my email. How they handle data is described in their own policy.</p>
 
     <h2>Information stored on your device</h2>
-    <p>The site stores one small setting in your browser (your light or dark theme choice) so it can remember it next time. It is not sent anywhere. The site currently <strong>does not use tracking cookies</strong> or analytics tools.</p>
+    <p>The site stores one small setting in your browser (your light or dark theme choice) so it can remember it next time. It is not sent anywhere.</p>
+    {SITE.analytics.id ? (
+      <p>To learn how many people visit and which pages they read, the site uses the analytics tool <strong>{SITE.analytics.provider === 'cloudflare' ? 'Cloudflare Web Analytics' : SITE.analytics.provider === 'goatcounter' ? 'GoatCounter' : 'Plausible'}</strong>. According to the provider, it does not use tracking cookies and only records aggregated figures, without building a personal profile of you. I use these figures to improve the content of the site.</p>
+    ) : (
+      <p>The site currently <strong>does not use tracking cookies</strong> or analytics tools.</p>
+    )}
 
     <h2>Hosting</h2>
     <p>The site is hosted on GitHub Pages. As with any web host, the provider may record basic technical details of visits, such as IP addresses, under its own policy.</p>

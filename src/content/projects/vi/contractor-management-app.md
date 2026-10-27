@@ -9,6 +9,7 @@ featured: true
 sample: false
 role: "Thiết kế & phát triển Power Apps"
 stack: ["Power Apps", "Power Fx", "Power Automate", "SharePoint"]
+flow: ["Hồ sơ gửi từ cổng riêng", "Phân công người duyệt", "Nhiều người duyệt, từ chối kèm lý do", "Ghi lại lịch sử xác nhận", "Thông báo kết quả"]
 results:
   - "Mở rộng quy trình duyệt hồ sơ nhà thầu từ một người duyệt sang nhiều người duyệt, có lịch sử xác nhận"
   - "Thêm chức năng phân công người duyệt thay, giữ bản máy tính và bản điện thoại đồng bộ"

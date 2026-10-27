@@ -1,0 +1,13 @@
+---
+import { lp, ui, type Lang } from '../i18n';
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+---
+<section class="block teaser">
+  <div>
+    <h2>{t.home.calcTitle}</h2>
+    <p>{t.home.calcText}</p>
+  </div>
+  <a class="btn" href={lp(lang, '/calculator/')}>{t.home.calcBtn}</a>
+</section>

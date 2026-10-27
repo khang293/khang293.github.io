@@ -4,8 +4,9 @@ import { SITE } from '../config';
 import { ui, lp, altPath, type Lang } from '../i18n';
 import { getJournal } from '../lib';
 
-interface Props { title?: string; description?: string; lang?: Lang; wide?: boolean; noindex?: boolean; }
-const { title, description, lang = 'vi', wide = false, noindex = false } = Astro.props;
+interface Props { title?: string; description?: string; lang?: Lang; wide?: boolean; noindex?: boolean; schema?: object | object[]; }
+const { title, description, lang = 'vi', wide = false, noindex = false, schema } = Astro.props;
+const schemaList = schema ? (Array.isArray(schema) ? schema : [schema]) : [];
 const t = ui[lang];
 const desc = description || SITE.text[lang].description;
 const fullTitle = title ? `${title} · ${SITE.brand}` : `${SITE.brand} · ${SITE.text[lang].role}`;
@@ -15,6 +16,8 @@ const other: Lang = lang === 'vi' ? 'en' : 'vi';
 const otherHref = altPath(path, lang);
 
 // Mục Nhật ký chỉ hiện trên menu khi đã có ít nhất một bài
+const zaloHref = SITE.zalo ? (SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}`) : '';
+const an = SITE.analytics;
 const hasJournal = lang === 'vi' && (await getJournal()).length > 0;
 const ogImage = new URL('/og-image.png', Astro.site).href;
 
@@ -42,6 +45,7 @@ const contactLinks = [
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
     {noindex && <meta name="robots" content="noindex" />}
+    {schemaList.map((s) => <script type="application/ld+json" set:html={JSON.stringify(s)} />)}
     <link rel="canonical" href={canonical} />
     <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />
     <link rel="alternate" type="application/rss+xml" title={SITE.brand} href="/rss.xml" />
@@ -62,6 +66,15 @@ const contactLinks = [
         if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved);
       } catch (e) {}
     </script>
+    {an.id && an.provider === 'cloudflare' && (
+      <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: an.id })}></script>
+    )}
+    {an.id && an.provider === 'goatcounter' && (
+      <script is:inline async src="//gc.zgo.at/count.js" data-goatcounter={`https://${an.id}.goatcounter.com/count`}></script>
+    )}
+    {an.id && an.provider === 'plausible' && (
+      <script is:inline defer src="https://plausible.io/js/script.js" data-domain={an.id}></script>
+    )}
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💻</text></svg>" />
   </head>
   <body>
@@ -91,7 +104,9 @@ const contactLinks = [
         </div>
         <div class="foot-links">
           {nav.map(([href, label]) => <a href={lp(lang, href)}>{label}</a>)}
+          <a href={lp(lang, '/how-we-work/')}>{t.howLink}</a>
           <a href={lp(lang, '/contact/')}>{t.nav.contact}</a>
+          <a href={t.profile.file} download>{t.profile.download}</a>
         </div>
         {contactLinks.length > 0 && (
           <div class="foot-links">
@@ -104,6 +119,12 @@ const contactLinks = [
         © {new Date().getFullYear()} {SITE.author} · <a href={lp(lang, '/privacy/')}>{t.privacy}</a>
       </div>
     </footer>
+
+    {zaloHref && (
+      <a class="float-zalo" href={zaloHref} target="_blank" rel="noopener" aria-label={t.chatZalo}>
+        <span aria-hidden="true">💬</span><b>{t.chatZalo}</b>
+      </a>
+    )}
 
     <script is:inline>
       // Nút chuyển sáng / tối: mặc định theo hệ thống, chọn tay thì nhớ lại

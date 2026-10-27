@@ -1,15 +1,37 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import EntryItem from '../EntryItem.astro';
+import { SITE } from '../../config';
 import { ui, lp, type Lang } from '../../i18n';
-import { fmtDate, readingTime, tagSlug } from '../../lib';
+import { fmtDate, readingTime, tagSlug, getPosts } from '../../lib';
+import { blogPostSchema, breadcrumbSchema } from '../../schema';
 
 interface Props { lang: Lang; entry: any; }
 const { lang, entry } = Astro.props;
 const t = ui[lang];
 const { Content } = await render(entry);
+
+// Bài liên quan: cùng ngôn ngữ, ưu tiên bài có chung thẻ
+const tags: string[] = entry.data.tags;
+const others = (await getPosts(lang)).filter((p) => p.id !== entry.id);
+const related = others
+  .map((p) => ({ p, score: p.data.tags.filter((x: string) => tags.includes(x)).length }))
+  .sort((a, b) => b.score - a.score || +b.p.data.date - +a.p.data.date)
+  .slice(0, 3)
+  .map((x) => x.p);
+
+const path = lp(lang, `/posts/${entry.id}/`);
+const schema = [
+  blogPostSchema(lang, { title: entry.data.title, description: entry.data.description, date: entry.data.date }, path),
+  breadcrumbSchema([
+    { name: lang === 'vi' ? 'Trang chủ' : 'Home', path: lp(lang, '/') },
+    { name: t.nav.blog, path: lp(lang, '/posts/') },
+    { name: entry.data.title, path },
+  ]),
+];
 ---
-<Base lang={lang} title={entry.data.title} description={entry.data.description}>
+<Base lang={lang} title={entry.data.title} description={entry.data.description} schema={schema}>
   <article class="article">
     <header>
       <h1>{entry.data.title}</h1>
@@ -24,5 +46,28 @@ const { Content } = await render(entry);
     </header>
     <div class="prose"><Content /></div>
   </article>
+
+  <aside class="post-cta">
+    <h2>{t.postCta.title}</h2>
+    <p>{t.postCta.text}</p>
+    <div class="cta-actions left">
+      <a class="btn" href={lp(lang, '/contact/')}>{t.postCta.contact}</a>
+      <a class="btn ghost" href={lp(lang, '/calculator/')}>{t.postCta.calc}</a>
+      {SITE.zalo && <a class="btn ghost" href={SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}`} target="_blank" rel="noopener">{t.chatZalo}</a>}
+    </div>
+  </aside>
+
+  {related.length > 0 && (
+    <section class="related">
+      <h2>{t.related}</h2>
+      <ul class="list">
+        {related.map((p) => (
+          <EntryItem lang={lang} href={lp(lang, `/posts/${p.id}/`)} title={p.data.title} date={p.data.date}
+            description={p.data.description} tags={p.data.tags} minutes={readingTime(p.body)} />
+        ))}
+      </ul>
+    </section>
+  )}
+
   <p><a href={lp(lang, '/posts/')}>{t.back}</a></p>
 </Base>

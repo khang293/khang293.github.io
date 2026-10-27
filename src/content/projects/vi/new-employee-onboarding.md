@@ -8,6 +8,7 @@ featured: true
 sample: false
 role: "Thiết kế & phát triển"
 stack: ["Power Automate", "Microsoft 365"]
+flow: ["Có nhân viên mới", "Thông báo từng bộ phận", "Phê duyệt từng hạng mục", "Thực hiện cấp phát", "Nhắc việc nếu chưa xử lý"]
 results:
   - "Thông báo tự động đến đúng bộ phận khi có nhân viên mới, không phải nhắn tay từng nơi"
   - "Mỗi lần cấp máy tính, email hoặc đồng phục đều có bước phê duyệt rõ ràng"
@@ -26,13 +27,6 @@ Mình xây dựng một bộ luồng **Power Automate** chạy theo quy trình t
 - **Các hạng mục cấp phát**: cấp máy tính, cấp email, cấp đồng phục và các vật dụng liên quan.
 - **Phê duyệt cho mỗi lần cấp**: từng hạng mục đi qua bước phê duyệt trước khi thực hiện.
 - **Nhắc việc** khi có hạng mục chưa được xử lý.
-
-## Quy trình tổng quát
-
-1. Có nhân viên mới: luồng ghi nhận và gửi thông báo cho từng bộ phận.
-2. Mỗi bộ phận nhận yêu cầu cấp phát thuộc phần của mình.
-3. Yêu cầu đi qua bước phê duyệt, người duyệt xử lý ngay từ email hoặc thông báo.
-4. Sau khi được duyệt thì thực hiện cấp phát, hạng mục nào chưa xử lý sẽ được nhắc.
 
 ## Điểm đáng chú ý
 

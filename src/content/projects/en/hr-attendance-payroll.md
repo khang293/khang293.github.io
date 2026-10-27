@@ -8,6 +8,7 @@ featured: true
 sample: false
 role: "Design & development"
 stack: ["Power Apps", "Power Automate", "SharePoint", "Power BI"]
+flow: ["Check in/out with location and photo", "Data stored centrally", "Approval for cases needing confirmation", "Payroll by rules", "Power BI reporting"]
 results:
   - "Location-based check-in/out with a photo kept as evidence, replacing manual sign-in sheets"
   - "Payroll calculated automatically from working hours, overtime and allowances, cutting manual month-end consolidation"
@@ -28,13 +29,6 @@ The system is built on Power Platform: **Power Apps** provides the interface, **
 - **Rule-based payroll**: calculated automatically from attendance data using working hours, overtime, allowances and related items.
 - **Automated approvals and reminders**: Power Automate runs approval flows and sends reminders to the right people at the right time.
 - **Reporting**: Power BI dashboards for managers to follow attendance and workforce cost.
-
-## The general flow
-
-1. An employee opens the app and checks in or out: the system records location, time and a photo.
-2. Attendance data is stored centrally, and cases that need confirmation are sent for approval.
-3. At the end of the period, a flow calculates payroll using working hours, overtime and allowance rules.
-4. Managers review the reports in Power BI.
 
 ## Highlights
 

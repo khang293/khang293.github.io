@@ -1,0 +1,75 @@
+---
+import Base from '../../layouts/Base.astro';
+import { ui, lp, type Lang } from '../../i18n';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = ui[lang];
+const c = t.calc;
+---
+<Base lang={lang} title={c.title} description={c.sub}>
+  <h1>{c.title}</h1>
+  <p class="meta">{c.sub}</p>
+
+  <div id="calc" class="calc" data-locale={t.locale} data-currency={c.currency} data-unit={c.paybackUnit} data-none={c.paybackNone}>
+    <div class="calc-in form">
+      <label>{c.people}<input id="c-people" type="number" min="1" step="1" value="3" inputmode="numeric" /></label>
+      <label>{c.hours}<input id="c-hours" type="number" min="0" step="0.5" value="5" inputmode="decimal" /></label>
+      <label>{c.rate}<input id="c-rate" type="number" min="0" step="1" value={c.defaultRate} inputmode="numeric" /></label>
+      <label>{c.auto}: <b id="c-auto-out">50%</b>
+        <input id="c-auto" type="range" min="10" max="90" step="5" value="50" />
+      </label>
+      <label>{c.cost}<input id="c-cost" type="number" min="0" step="1" placeholder="0" inputmode="numeric" /></label>
+    </div>
+
+    <div class="calc-out panel">
+      <h2>{c.resTitle}</h2>
+      <dl>
+        <div><dt>{c.hoursMonth}</dt><dd id="r-month">0</dd></div>
+        <div><dt>{c.hoursYear}</dt><dd id="r-year">0</dd></div>
+        <div><dt>{c.moneyYear}</dt><dd id="r-money">0</dd></div>
+        <div><dt>{c.payback}</dt><dd id="r-payback">{c.paybackNone}</dd></div>
+      </dl>
+      <p class="meta calc-note">{c.note}</p>
+      <a class="btn" href={lp(lang, '/contact/')}>{c.cta}</a>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var root = document.getElementById('calc');
+      if (!root) return;
+      var loc = root.dataset.locale, cur = root.dataset.currency, unit = root.dataset.unit, none = root.dataset.none;
+      var nf = new Intl.NumberFormat(loc, { maximumFractionDigits: 0 });
+      var nf1 = new Intl.NumberFormat(loc, { maximumFractionDigits: 1 });
+      function money(v) {
+        return cur === 'USD'
+          ? new Intl.NumberFormat(loc, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v)
+          : nf.format(v) + ' ' + cur;
+      }
+      function num(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) && v > 0 ? v : 0; }
+      function set(id, text) { document.getElementById(id).textContent = text; }
+      function calc() {
+        var people = num('c-people'), hours = num('c-hours'), rate = num('c-rate');
+        var autoPct = Math.min(100, num('c-auto')), cost = num('c-cost');
+        set('c-auto-out', autoPct + '%');
+        var perWeek = people * hours * (autoPct / 100);
+        var perYear = perWeek * 52;
+        var moneyYear = perYear * rate;
+        set('r-month', nf.format(Math.round(perYear / 12)));
+        set('r-year', nf.format(Math.round(perYear)));
+        set('r-money', money(moneyYear));
+        var pbEl = document.getElementById('r-payback');
+        pbEl.classList.toggle('dim', !(cost > 0 && moneyYear > 0));
+        if (cost > 0 && moneyYear > 0) {
+          var months = cost / (moneyYear / 12);
+          set('r-payback', (months < 1 ? '< 1' : nf1.format(months)) + ' ' + unit);
+        } else {
+          set('r-payback', none);
+        }
+      }
+      root.addEventListener('input', calc);
+      calc();
+    })();
+  </script>
+</Base>

@@ -27,6 +27,12 @@ const { Content } = await render(entry);
         <div class="chips">{d.stack.map((s: string) => <span class="chip-big">{s}</span>)}</div>
       </section>
     )}
+    {d.flow.length > 0 && (
+      <section class="panel">
+        <h2>{t.flowTitle}</h2>
+        <ol class="flow">{d.flow.map((s: string, i: number) => <li><b>{i + 1}</b><span>{s}</span></li>)}</ol>
+      </section>
+    )}
     <div class="prose"><Content /></div>
     {d.results.length > 0 && (
       <section class="panel">
