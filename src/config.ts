@@ -16,6 +16,9 @@ export const SITE = {
   zalo: 'https://zaloapp.com/qr/p/8srplan6dk7h',      // số điện thoại Zalo hoặc link zalo.me/...
   telegram: '',  // username, không có @
 
+  // Mã xác minh chủ web của Google Search Console (phần sau content= của thẻ meta). Để trống = không thêm thẻ.
+  googleVerification: '0RTzsrnLUyqbLTpTYm2-CDoWAzMnsCCd__8JI6xgtdw',
+
   // Link đặt lịch trao đổi (Calendly, Cal.com, Google Calendar...). Để trống = ẩn nút đặt lịch.
   booking: '',
 

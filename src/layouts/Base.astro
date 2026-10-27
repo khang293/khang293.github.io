@@ -44,6 +44,7 @@ const contactLinks = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
+    {SITE.googleVerification && <meta name="google-site-verification" content={SITE.googleVerification} />}
     {noindex && <meta name="robots" content="noindex" />}
     {schemaList.map((s) => <script type="application/ld+json" set:html={JSON.stringify(s)} />)}
     <link rel="canonical" href={canonical} />
