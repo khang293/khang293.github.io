@@ -6,8 +6,8 @@ export default defineConfig({
   integrations: [
     sitemap({
       i18n: { defaultLocale: 'vi', locales: { vi: 'vi-VN', en: 'en-US' } },
-      // Trang nguồn để in PDF không cần xuất hiện trên Google
-      filter: (page) => !/\/profile\/?$/.test(page),
+      // Trang nguồn để in PDF và trang trò chơi tạm không cần xuất hiện trên Google
+      filter: (page) => !/\/(profile|game)(\/|$)/.test(page),
     }),
   ],
   i18n: {
