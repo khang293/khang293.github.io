@@ -1,0 +1,39 @@
+---
+import Base from '../../layouts/Base.astro';
+import { lp, type Lang } from '../../i18n';
+import { gamesUi } from '../../data/games';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const g = gamesUi[lang];
+const cards = [
+  { key: 'quiz', href: lp(lang, '/game/quiz/'), ...g.cards.quiz },
+  { key: 'bomb', href: lp(lang, '/game/bomb/'), ...g.cards.bomb },
+  { key: 'fight', href: lp(lang, '/game/fight/'), ...g.cards.fight },
+];
+---
+<Base lang={lang} title={g.hubTitle} description={g.hubSub} noindex>
+  <h1>{g.hubTitle}</h1>
+  <p class="meta">{g.hubSub}</p>
+
+  <div class="game-cards">
+    {cards.map((c) => (
+      <a class="game-card" href={c.href}>
+        <span class="game-ic" aria-hidden="true">{c.icon}</span>
+        <b>{c.title}</b>
+        <span class="game-desc">{c.desc}</span>
+        <span class="btn sm">{g.play}</span>
+      </a>
+    ))}
+  </div>
+</Base>
+
+<style>
+  .game-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 24px; }
+  .game-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; color: var(--fg); }
+  .game-card:hover { border-color: var(--accent); text-decoration: none; }
+  .game-ic { font-size: 2.2rem; line-height: 1; }
+  .game-card b { font-size: 1.15rem; }
+  .game-desc { color: var(--muted); font-size: .93rem; line-height: 1.5; flex: 1; }
+  .game-card .btn { margin-top: 8px; }
+</style>

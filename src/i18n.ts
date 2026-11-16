@@ -34,6 +34,7 @@ export const ui = {
       calc: 'Tính thử số giờ tiết kiệm',
     },
     howLink: 'Cách làm việc',
+    gameLink: '🎮 Trò chơi',
     how: {
       title: 'Cách làm việc',
       sub: 'Một dự án diễn ra như thế nào, từ lúc bạn liên hệ đến khi bàn giao.',
@@ -209,6 +210,7 @@ export const ui = {
       calc: 'Estimate the hours you could save',
     },
     howLink: 'How I work',
+    gameLink: '🎮 Games',
     how: {
       title: 'How I work',
       sub: 'How a project unfolds, from the moment you get in touch to handover.',
