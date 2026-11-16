@@ -59,12 +59,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       </div>
       <canvas id="bm-canvas" width="720" height="624" aria-label={b.title}></canvas>
       <div class="bm-pad" aria-hidden="false">
-        <div class="bm-dpad">
-          <button type="button" data-dir="up" aria-label="Up">▲</button>
-          <button type="button" data-dir="left" aria-label="Left">◀</button>
-          <button type="button" data-dir="down" aria-label="Down">▼</button>
-          <button type="button" data-dir="right" aria-label="Right">▶</button>
-        </div>
+        <div class="joy" id="bm-joy" role="application" aria-label="Joystick"></div>
         <div class="bm-btns">
           <button type="button" class="bm-ult" id="bm-ult">⚡ {b.ultLabel}</button>
           <button type="button" class="bm-drop" id="bm-drop">💣 {b.bombBtn}</button>
@@ -85,6 +80,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
 
 <script>
   import { paintHero, type Look, type G } from '../../data/heroArt';
+  import { createJoystick } from '../../data/joystick';
 
   const root = document.getElementById('bomb') as HTMLElement;
   const ui = JSON.parse(root.dataset.ui || '{}');
@@ -983,12 +979,15 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   window.addEventListener('blur', () => { dirStack.length = 0; });
 
   // Điều khiển cảm ứng
-  document.querySelectorAll<HTMLButtonElement>('.bm-dpad button').forEach((btn) => {
-    const d = DIRS[btn.dataset.dir as keyof typeof DIRS];
-    const press = (e: Event) => { e.preventDefault(); if (!dirStack.includes(d)) dirStack.push(d); };
-    const release = () => dropDir(d);
-    btn.addEventListener('pointerdown', press);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, release));
+  // Cần điều khiển tròn: chạm giữ rồi kéo, chọn hướng theo trục lệch nhiều hơn
+  let joyDir: Dir | null = null;
+  createJoystick(document.getElementById('bm-joy') as HTMLElement, (x, y) => {
+    let d: Dir | null = null;
+    if (Math.hypot(x, y) > 0.3) d = Math.abs(x) > Math.abs(y) ? (x > 0 ? DIRS.right : DIRS.left) : (y > 0 ? DIRS.down : DIRS.up);
+    if (d === joyDir) return;
+    if (joyDir) dropDir(joyDir);
+    joyDir = d;
+    if (d && !dirStack.includes(d)) dirStack.push(d);
   });
   document.getElementById('bm-drop')!.addEventListener('pointerdown', (e) => { e.preventDefault(); wantBomb = true; });
   document.getElementById('bm-ult')!.addEventListener('pointerdown', (e) => { e.preventDefault(); wantUlt = true; });
@@ -1077,13 +1076,6 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   .bm-hud span { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; }
   .bm-pad { display: none; justify-content: space-between; align-items: center; margin-top: 14px; user-select: none; -webkit-user-select: none; }
   @media (pointer: coarse) { .bm-pad { display: flex; } }
-  .bm-dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
-  .bm-dpad button { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; font-size: 1.2rem; touch-action: none; }
-  .bm-dpad button:active { background: var(--accent); color: var(--on-accent); }
-  .bm-dpad [data-dir="up"] { grid-column: 2; grid-row: 1; }
-  .bm-dpad [data-dir="left"] { grid-column: 1; grid-row: 2; }
-  .bm-dpad [data-dir="right"] { grid-column: 3; grid-row: 2; }
-  .bm-dpad [data-dir="down"] { grid-column: 2; grid-row: 3; }
   .bm-btns { display: flex; align-items: center; gap: 12px; }
   .bm-ult { height: 72px; max-width: 110px; padding: 0 10px; border-radius: 16px; border: 2px solid #f59e0b; background: color-mix(in srgb, #f59e0b 22%, var(--card)); color: var(--fg); font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; touch-action: none; }
   .bm-ult:disabled { opacity: .45; border-color: var(--line); cursor: default; }

@@ -238,3 +238,8 @@ pre:hover .copy,.copy:focus{opacity:1}
 .how-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:8px}
 .how-cols .panel{margin:0}
 .how-cta{margin-top:26px}
+
+/* Cần điều khiển tròn trên điện thoại cho các trò chơi */
+.joy{position:relative;width:136px;height:136px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 14%,var(--card)) 0 38%,var(--card) 39%);border:2px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
+.joy::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed var(--line)}
+.joy-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 2px 4px rgba(255,255,255,.35);pointer-events:none}
