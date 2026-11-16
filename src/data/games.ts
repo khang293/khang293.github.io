@@ -6,6 +6,7 @@ export const gamesUi = {
     play: 'Chơi',
     back: '← Trò chơi',
     cards: {
+      survive: { icon: '🌙', title: 'Sinh Tồn Đêm Dài', desc: 'Nhân vật tự ra đòn, bạn né quái, nhặt ngọc, lên cấp và sống sót đến sáng. Ván ngắn, rất cuốn.' },
       fight: { icon: '🥊', title: 'Đấu Trường Võ Sĩ', desc: 'Đối kháng 1 đấu 1: đấm, đá, đỡ đòn và tung chiêu đặc biệt. Thắng 2 trên 3 hiệp.' },
       quiz: { icon: '🧠', title: 'Đố vui Power Platform', desc: '10 câu mỗi lượt, 3 độ khó, kiểm tra kiến thức Power Apps, Power Automate, Power BI.' },
       bomb: { icon: '💣', title: 'Bomb Arena', desc: 'Đặt bom, phá tường, nhặt vật phẩm và hạ gục các bot. Chơi một mình với máy.' },
@@ -107,6 +108,7 @@ export const gamesUi = {
     play: 'Play',
     back: '← Games',
     cards: {
+      survive: { icon: '🌙', title: 'Long Night Survivors', desc: 'Your hero attacks on its own while you dodge monsters, grab gems, level up and survive until dawn. Short and addictive runs.' },
       fight: { icon: '🥊', title: 'Arena Duel', desc: 'One-on-one fighting: punch, kick, block and unleash special moves. Best of three rounds.' },
       quiz: { icon: '🧠', title: 'Power Platform Quiz', desc: '10 questions per round, 3 levels, test your Power Apps, Power Automate and Power BI knowledge.' },
       bomb: { icon: '💣', title: 'Bomb Arena', desc: 'Drop bombs, break walls, grab power-ups and take out the bots. Single player versus the computer.' },
