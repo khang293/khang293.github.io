@@ -1,4 +1,4 @@
----
+﻿---
 import '../styles/global.css';
 import { SITE } from '../config';
 import { ui, lp, altPath, type Lang } from '../i18n';
@@ -168,6 +168,45 @@ const contactLinks = [
           root.setAttribute('data-theme', next);
           try { localStorage.setItem('theme', next); } catch (e) {}
         });
+      })();
+    </script>
+    <script is:inline>
+      // Nút toàn màn hình cho trang trò chơi: dùng Fullscreen API nếu có, không thì phủ kín khung nhìn (iPhone)
+      (function () {
+        if (!/\/game\/[^/]+\/?$/.test(location.pathname)) return;
+        var main = document.querySelector('main');
+        if (!main) return;
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'fs-btn';
+        var vi = document.documentElement.lang === 'vi';
+        function paint() {
+          var on = main.classList.contains('is-fs');
+          btn.textContent = on ? '✕' : '⛶';
+          var label = on ? (vi ? 'Thoát toàn màn hình' : 'Exit full screen') : (vi ? 'Toàn màn hình' : 'Full screen');
+          btn.title = label; btn.setAttribute('aria-label', label);
+        }
+        function setFs(on) {
+          main.classList.toggle('is-fs', on);
+          document.body.classList.toggle('has-fs', on);
+          paint();
+          window.dispatchEvent(new Event('resize'));
+        }
+        btn.addEventListener('click', function () {
+          var on = !main.classList.contains('is-fs');
+          setFs(on);
+          var de = document.documentElement;
+          try {
+            if (on && de.requestFullscreen) de.requestFullscreen().catch(function () {});
+            else if (on && de.webkitRequestFullscreen) de.webkitRequestFullscreen();
+            else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+          } catch (e) {}
+        });
+        // Người dùng thoát bằng phím Esc của trình duyệt
+        document.addEventListener('fullscreenchange', function () {
+          if (!document.fullscreenElement && main.classList.contains('is-fs')) setFs(false);
+        });
+        main.insertBefore(btn, main.firstChild);
+        paint();
       })();
     </script>
     <script is:inline>

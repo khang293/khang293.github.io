@@ -24,6 +24,10 @@ const ui = {
         <button type="button" class="bd-opt sel" data-mode="bot">{c.modeBot}</button>
         <button type="button" class="bd-opt" data-mode="two">{c.modeTwo}</button>
       </div>
+      <h2 class="bd-h">{c.size}</h2>
+      <div class="bd-row">
+        {c.sizes.map((l, i) => <button type="button" class={`bd-opt${i === 0 ? ' sel' : ''}`} data-size={[15, 19, 25][i]}>{l}</button>)}
+      </div>
       <div id="cr-botopts">
         <h2 class="bd-h">{c.level}</h2>
         <div class="bd-row">
@@ -41,7 +45,7 @@ const ui = {
 
     <div id="cr-game" hidden>
       <p class="bd-status" id="cr-status" aria-live="polite"></p>
-      <canvas id="cr-canvas" width="864" height="864" aria-label={c.title}></canvas>
+      <div id="cr-scroll"><canvas id="cr-canvas" width="1040" height="1040" aria-label={c.title}></canvas></div>
       <div class="bd-row bd-actions">
         <button type="button" class="btn ghost sm" id="cr-undo">↶ {c.undo}</button>
         <button type="button" class="btn ghost sm" id="cr-new">{c.again}</button>
@@ -54,6 +58,7 @@ const ui = {
 <script>
   import { sfx, mountMute } from '../../data/sfx';
 
+  import { insaneMove } from '../../data/caroEngine';
   const root = document.getElementById('caro') as HTMLElement;
   const ui = JSON.parse(root.dataset.ui || '{}');
   const menu = document.getElementById('cr-menu') as HTMLElement;
@@ -62,7 +67,8 @@ const ui = {
   const g = canvas.getContext('2d')!;
   const statusEl = document.getElementById('cr-status') as HTMLElement;
 
-  const N = 15, CELL = 56;
+  let N = 15, size = 15;
+  const CELL = 68; // đơn vị vẽ cố định, bàn lớn hơn thì canvas lớn hơn và được thu nhỏ khi hiển thị
   const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
   let mode = 'bot', level = 2, humanSide = 1; // 1 = X đi trước, 2 = O đi sau
   let human = 1;
@@ -132,8 +138,9 @@ const ui = {
     return out;
   }
   function aiMove(me: number): number {
+    if (level === 4) return insaneMove(b, me, 1500, N); // tìm kiếm sâu + chuỗi ép thắng, xem src/data/caroEngine.ts
     const foe = 3 - me;
-    if (!moves.length) return 7 * N + 7;
+    if (!moves.length) return (N >> 1) * N + (N >> 1);
     const cand = candidates();
     if (!cand.length) return -1;
     const A = 1, D = level === 1 ? 0.45 : level === 2 ? 0.9 : 1;
@@ -160,16 +167,17 @@ const ui = {
   }
 
   // ---------- Vẽ ----------
-  const PAD = 44, SZ = PAD * 2 + CELL * (N - 1);
-  canvas.width = SZ; canvas.height = SZ;
+  const PAD = 44;
+  let SZ = PAD * 2 + CELL * (N - 1);
   const px = (i: number) => PAD + (i % N) * CELL, py = (i: number) => PAD + Math.floor(i / N) * CELL;
   let hover = -1, animStart = 0, winStart = 0, raf = 0;
   mountMute(gameEl);
 
   // Mặt bàn gỗ vẽ một lần rồi tái sử dụng
   const bg = document.createElement('canvas');
-  bg.width = SZ; bg.height = SZ;
-  (function buildBg() {
+  function buildBg() {
+    SZ = PAD * 2 + CELL * (N - 1);
+    bg.width = SZ; bg.height = SZ; canvas.width = SZ; canvas.height = SZ;
     const k = bg.getContext('2d')!;
     const wood = k.createLinearGradient(0, 0, SZ, SZ);
     wood.addColorStop(0, '#efd29a'); wood.addColorStop(0.5, '#e3bd7a'); wood.addColorStop(1, '#d6a85e');
@@ -191,14 +199,19 @@ const ui = {
     }
     k.stroke();
     k.fillStyle = 'rgba(70,45,15,.9)';
-    for (const [r, c] of [[3, 3], [3, 11], [7, 7], [11, 3], [11, 11]]) { k.beginPath(); k.arc(PAD + c * CELL, PAD + r * CELL, 5, 0, Math.PI * 2); k.fill(); }
+    const sp = N === 15 ? [3, 7, 11] : [3, (N - 1) / 2, N - 4];
+    const stars = N === 15 ? [[3, 3], [3, 11], [7, 7], [11, 3], [11, 11]] : sp.flatMap((r) => sp.map((c) => [r, c]));
+    for (const [r, c] of stars) { k.beginPath(); k.arc(PAD + c * CELL, PAD + r * CELL, 5, 0, Math.PI * 2); k.fill(); }
     k.font = `700 15px system-ui, sans-serif`; k.fillStyle = 'rgba(70,45,15,.85)'; k.textAlign = 'center'; k.textBaseline = 'middle';
     for (let i = 0; i < N; i++) {
       const p = PAD + i * CELL, ch = String.fromCharCode(65 + i);
       k.fillText(ch, p, 17); k.fillText(ch, p, SZ - 17);
       k.fillText(String(i + 1), 17, p); k.fillText(String(i + 1), SZ - 17, p);
     }
-  })();
+  }
+  buildBg();
+  // Bàn lớn hơn 15 thì cuộn ngang trên màn hình hẹp để ô không quá nhỏ
+  function fitCanvas() { canvas.style.width = size === 15 ? '' : ('max(min(100%, 1040px), ' + (N * 26) + 'px)'); }
 
   function mark(who: number, x: number, y: number, scale = 1, alpha = 1) {
     g.save(); g.translate(x, y); g.scale(scale, scale); g.globalAlpha = alpha; g.lineCap = 'round';
@@ -332,6 +345,8 @@ const ui = {
   });
   canvas.addEventListener('pointerleave', () => { if (hover >= 0) { hover = -1; draw(); } });
   function newGame() {
+    if (N !== size) { N = size; buildBg(); }
+    fitCanvas();
     b = new Int8Array(N * N); moves = []; turn = 1; over = ''; winLine = []; thinking = false;
     human = humanSide;
     draw();
@@ -358,6 +373,7 @@ const ui = {
   pick('mode', (v) => { mode = v; (document.getElementById('cr-botopts') as HTMLElement).hidden = v !== 'bot'; });
   pick('level', (v) => { level = Number(v); });
   pick('side', (v) => { humanSide = Number(v); });
+  pick('size', (v) => { size = Number(v); });
   paintStat();
 
   if (location.hash === '#debug') (window as any).__cr = { board: () => b, moves: () => moves, over: () => over };
@@ -367,5 +383,7 @@ const ui = {
   .sfx-btn { background: rgba(30, 35, 60, .88) !important; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
   #cr-menu[hidden], #cr-game[hidden], #cr-botopts[hidden] { display: none; }
   #cr-game { position: relative; }
+  #cr-scroll { overflow-x: auto; overflow-y: hidden; }
+  #cr-scroll #cr-canvas { margin: 0 auto; }
   #cr-game .sfx-btn { top: -4px !important; right: 4px !important; }
-  #cr-canvas { width: min(100%, 860px); height: auto; aspect-ratio: 1; display: block; border-radius: 10px; border: 4px solid #4a3220; box-shadow: 0 14px 36px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.15); touch-action: manipulation; cursor: pointer; }</style>
+  #cr-canvas { width: min(100%, 1040px); height: auto; aspect-ratio: 1; display: block; border-radius: 10px; border: 4px solid #4a3220; box-shadow: 0 14px 36px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.15); touch-action: manipulation; cursor: pointer; }</style>
