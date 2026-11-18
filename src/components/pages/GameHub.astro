@@ -7,6 +7,14 @@ interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const g = gamesUi[lang];
 const cards = [
+  { key: 'match3', href: lp(lang, '/game/match3/'), ...g.cards.match3 },
+  { key: 'fxbug', href: lp(lang, '/game/fxbug/'), ...g.cards.fxbug },
+  { key: 'tower', href: lp(lang, '/game/tower/'), ...g.cards.tower },
+  { key: 'racer', href: lp(lang, '/game/racer/'), ...g.cards.racer },
+  { key: 'snake', href: lp(lang, '/game/snake/'), ...g.cards.snake },
+  { key: 'g2048', href: lp(lang, '/game/2048/'), ...g.cards.g2048 },
+  { key: 'mines', href: lp(lang, '/game/mines/'), ...g.cards.mines },
+  { key: 'memory', href: lp(lang, '/game/memory/'), ...g.cards.memory },
   { key: 'chess', href: lp(lang, '/game/chess/'), ...g.cards.chess },
   { key: 'caro', href: lp(lang, '/game/caro/'), ...g.cards.caro },
   { key: 'survive', href: lp(lang, '/game/survive/'), ...g.cards.survive },

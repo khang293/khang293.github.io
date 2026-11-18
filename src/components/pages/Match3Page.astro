@@ -1,0 +1,528 @@
+﻿---
+import Base from '../../layouts/Base.astro';
+import { lp, type Lang } from '../../i18n';
+import { gamesUi } from '../../data/games';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const g = gamesUi[lang];
+const S = {
+  vi: {
+    title: 'Nối Thú',
+    sub: 'Hoán đổi hai con thú cạnh nhau để nối 3 con giống nhau trở lên. Nối 4 con ra thú sọc, nối 5 con ra bóng cầu vồng. Đạt đủ điểm trước khi hết nước đi.',
+    pick: 'Chọn màn chơi', level: 'Màn', moves: 'Nước đi', score: 'Điểm', goal: 'Mục tiêu',
+    restart: 'Chơi lại', next: 'Màn tiếp →', toLevels: 'Chọn màn',
+    win: 'Qua màn!', lose: 'Hết nước đi, chưa đủ điểm.', reshuffle: 'Hết nước đi hợp lệ, xáo trộn bàn!', combo: 'Dây chuyền',
+    stars: 'Tổng số sao',
+    keys: 'Bấm hoặc vuốt một con thú sang ô bên cạnh để đổi chỗ. Thú sọc xóa cả hàng hoặc cột, bóng cầu vồng xóa mọi con cùng màu với con bạn đổi cùng. Đứng yên vài giây sẽ có gợi ý.',
+    locked: 'Qua màn trước để mở',
+  },
+  en: {
+    title: 'Critter Match',
+    sub: 'Swap two neighbouring critters to line up 3 or more of the same kind. Match 4 for a striped critter, match 5 for a rainbow ball. Reach the goal score before you run out of moves.',
+    pick: 'Choose a level', level: 'Level', moves: 'Moves', score: 'Score', goal: 'Goal',
+    restart: 'Retry', next: 'Next level →', toLevels: 'Levels',
+    win: 'Level cleared!', lose: 'Out of moves, goal not reached.', reshuffle: 'No moves left, shuffling the board!', combo: 'Chain',
+    stars: 'Total stars',
+    keys: 'Click or swipe a critter toward a neighbouring cell to swap. Striped critters clear a whole row or column, a rainbow ball clears every critter of the colour you swap it with. Wait a few seconds for a hint.',
+    locked: 'Clear the previous level to unlock',
+  },
+}[lang];
+const ui = { ...S };
+---
+<Base lang={lang} title={S.title} description={S.sub} noindex wide>
+  <p class="meta"><a href={lp(lang, '/game/')}>{g.back}</a></p>
+  <h1>{S.title}</h1>
+  <p class="meta">{S.sub}</p>
+
+  <div id="m3" data-ui={JSON.stringify(ui)}>
+    <div id="m3-menu">
+      <h2 class="bd-h">{S.pick}</h2>
+      <div id="m3-levels" class="m3-grid"></div>
+      <p class="bd-stat" id="m3-stat"></p>
+      <p class="meta">{S.keys}</p>
+    </div>
+
+    <div id="m3-game" hidden>
+      <div class="m3-hud">
+        <div><span>{S.level}</span><b id="m3-lv">1</b></div>
+        <div><span>{S.moves}</span><b id="m3-mv">0</b></div>
+        <div><span>{S.score}</span><b id="m3-sc">0</b></div>
+        <div><span>{S.goal}</span><b id="m3-goal">0</b></div>
+      </div>
+      <div class="m3-bar"><i id="m3-fill"></i><u class="a"></u><u class="b"></u></div>
+      <canvas id="m3-canvas" width="576" height="576" aria-label={S.title}></canvas>
+      <p class="bd-status" id="m3-status" aria-live="polite"></p>
+      <div class="bd-row bd-actions">
+        <button type="button" class="btn ghost sm" id="m3-restart">↻ {S.restart}</button>
+        <button type="button" class="btn sm" id="m3-next" hidden>{S.next}</button>
+        <button type="button" class="btn ghost sm" id="m3-back">{S.toLevels}</button>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const root = document.getElementById('m3') as HTMLElement;
+  const ui = JSON.parse(root.dataset.ui || '{}');
+  const menu = document.getElementById('m3-menu') as HTMLElement;
+  const gameEl = document.getElementById('m3-game') as HTMLElement;
+  const canvas = document.getElementById('m3-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const statusEl = $('m3-status');
+  const nextBtn = $('m3-next');
+
+  const N = 8, CELL = 72, SZ = N * CELL;
+  const LEVELS = [
+    { types: 4, moves: 20, goal: 2500 }, { types: 4, moves: 20, goal: 4000 }, { types: 5, moves: 22, goal: 3000 },
+    { types: 5, moves: 22, goal: 4000 }, { types: 5, moves: 22, goal: 5000 }, { types: 6, moves: 24, goal: 3000 },
+    { types: 6, moves: 24, goal: 3600 }, { types: 6, moves: 24, goal: 4000 }, { types: 6, moves: 25, goal: 4400 },
+    { types: 6, moves: 25, goal: 4800 }, { types: 6, moves: 26, goal: 5300 }, { types: 6, moves: 28, goal: 6000 },
+  ];
+  const COL = ['#ff6b57', '#4fa3ff', '#4fd066', '#ffcf33', '#b57cff', '#ff8fc4'];
+  const DARK = ['#c9402f', '#2a72c9', '#2a9a42', '#cc9a00', '#8450cc', '#d4558f'];
+
+  type Cell = { t: number; s: number; ox: number; oy: number; sc: number; a: number };
+  let grid: (Cell | null)[] = [];
+  let lvIdx = 0, moves = 0, score = 0, busy = false, over = false, fast = false;
+  let sel = -1, hint: number[] | null = null, idleT: any = 0;
+  let stars: number[] = LEVELS.map(() => 0);
+  try { const s = JSON.parse(localStorage.getItem('match3-stars') || 'null'); if (Array.isArray(s)) stars = LEVELS.map((_, i) => +s[i] || 0); } catch {}
+  const saveStars = () => { try { localStorage.setItem('match3-stars', JSON.stringify(stars)); } catch {} };
+
+  const mk = (t: number, s = 0): Cell => ({ t, s, ox: 0, oy: 0, sc: 1, a: 1 });
+  const rnd = (n: number) => Math.floor(Math.random() * n);
+  const nTypes = () => LEVELS[lvIdx].types;
+
+  // ---------- Hiệu ứng ----------
+  const parts: { x: number; y: number; vx: number; vy: number; life: number; max: number; c: string; r: number }[] = [];
+  const pops: { x: number; y: number; txt: string; life: number; big: boolean }[] = [];
+  const tween = (ms: number, fn: (k: number) => void) => new Promise<void>((res) => {
+    if (fast || ms <= 0) { fn(1); res(); return; }
+    const t0 = performance.now();
+    const step = (now: number) => { const k = Math.min(1, (now - t0) / ms); fn(k); if (k < 1) requestAnimationFrame(step); else res(); };
+    requestAnimationFrame(step);
+  });
+  const burst = (idx: number, t: number) => {
+    if (fast) return;
+    const x = (idx % N + 0.5) * CELL, y = (Math.floor(idx / N) + 0.5) * CELL;
+    const col = t >= 0 ? COL[t] : '#ffffff';
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * 6.283, v = 80 + Math.random() * 160;
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.5, max: 0.5, c: i % 3 === 0 ? '#fff' : col, r: 3 + Math.random() * 4 });
+    }
+  };
+  const popup = (x: number, y: number, txt: string, big = false) => { if (!fast) pops.push({ x, y, txt, life: 1, big }); };
+
+  // ---------- Luật ----------
+  const idx = (r: number, c: number) => r * N + c;
+  function findMatches() {
+    const runs: { cells: number[]; h: boolean }[] = [];
+    const set = new Set<number>();
+    const scan = (h: boolean) => {
+      for (let a = 0; a < N; a++) {
+        let b = 0;
+        while (b < N) {
+          const i0 = h ? idx(a, b) : idx(b, a);
+          const x = grid[i0];
+          if (!x || x.s === 3) { b++; continue; }
+          let e = b + 1;
+          while (e < N) { const y = grid[h ? idx(a, e) : idx(e, a)]; if (y && y.s !== 3 && y.t === x.t) e++; else break; }
+          if (e - b >= 3) {
+            const cells: number[] = [];
+            for (let k = b; k < e; k++) { const i = h ? idx(a, k) : idx(k, a); cells.push(i); set.add(i); }
+            runs.push({ cells, h });
+          }
+          b = e;
+        }
+      }
+    };
+    scan(true); scan(false);
+    return { runs, set };
+  }
+  function commonType() {
+    const cnt = new Array(6).fill(0);
+    for (const c of grid) if (c && c.t >= 0) cnt[c.t]++;
+    let best = 0; for (let i = 1; i < 6; i++) if (cnt[i] > cnt[best]) best = i;
+    return best;
+  }
+  function expand(start: Iterable<number>) {
+    const out = new Set<number>();
+    const st = [...start];
+    while (st.length) {
+      const i = st.pop()!;
+      if (out.has(i)) continue;
+      out.add(i);
+      const c = grid[i]; if (!c) continue;
+      const r = Math.floor(i / N), cc = i % N;
+      if (c.s === 1) for (let k = 0; k < N; k++) st.push(idx(r, k));
+      else if (c.s === 2) for (let k = 0; k < N; k++) st.push(idx(k, cc));
+      else if (c.s === 3) { const t = commonType(); for (let k = 0; k < N * N; k++) if (grid[k] && grid[k]!.t === t) st.push(k); }
+    }
+    return out;
+  }
+  const adjacent = (a: number, b: number) => Math.abs(Math.floor(a / N) - Math.floor(b / N)) + Math.abs((a % N) - (b % N)) === 1;
+  const swapLogic = (a: number, b: number) => { const t = grid[a]; grid[a] = grid[b]; grid[b] = t; };
+  function validSwap(a: number, b: number) {
+    if (!grid[a] || !grid[b]) return false;
+    if (grid[a]!.s === 3 || grid[b]!.s === 3) return true;
+    swapLogic(a, b);
+    const ok = findMatches().set.size > 0;
+    swapLogic(a, b);
+    return ok;
+  }
+  function findMove(): number[] | null {
+    const list: number[][] = [];
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      if (c + 1 < N && validSwap(idx(r, c), idx(r, c + 1))) list.push([idx(r, c), idx(r, c + 1)]);
+      if (r + 1 < N && validSwap(idx(r, c), idx(r + 1, c))) list.push([idx(r, c), idx(r + 1, c)]);
+    }
+    return list.length ? list[rnd(list.length)] : null;
+  }
+  function fillBoard() {
+    const T = nTypes();
+    for (let tries = 0; tries < 200; tries++) {
+      grid = new Array(N * N).fill(null);
+      for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+        let t = rnd(T), guard = 0;
+        while (guard++ < 20 && ((c >= 2 && grid[idx(r, c - 1)]!.t === t && grid[idx(r, c - 2)]!.t === t) || (r >= 2 && grid[idx(r - 1, c)]!.t === t && grid[idx(r - 2, c)]!.t === t))) t = rnd(T);
+        grid[idx(r, c)] = mk(t);
+      }
+      if (!findMatches().set.size && findMove()) return;
+    }
+  }
+  function shuffleBoard() {
+    for (let tries = 0; tries < 200; tries++) {
+      const cells = grid.filter(Boolean) as Cell[];
+      for (let i = cells.length - 1; i > 0; i--) { const j = rnd(i + 1); const t = cells[i]; cells[i] = cells[j]; cells[j] = t; }
+      grid = cells.slice();
+      if (!findMatches().set.size && findMove()) return;
+    }
+    fillBoard();
+  }
+
+  // ---------- Xử lý một lượt ----------
+  async function clearSet(set: Set<number>, chain: number) {
+    const arr = [...set].filter((i) => grid[i]);
+    let pts = 0, sx = 0, sy = 0;
+    for (const i of arr) { pts += 30 + (grid[i]!.s ? 50 : 0); sx += (i % N + 0.5) * CELL; sy += (Math.floor(i / N) + 0.5) * CELL; burst(i, grid[i]!.t); }
+    pts = Math.round(pts * (1 + 0.5 * (chain - 1)));
+    score += pts; updHud();
+    if (arr.length) popup(sx / arr.length, sy / arr.length, '+' + pts);
+    if (chain >= 2) popup(SZ / 2, SZ * 0.42 - chain * 6, `${ui.combo} x${chain}`, true);
+    await tween(190, (k) => { for (const i of arr) { const c = grid[i]!; c.sc = 1 - k; c.a = 1 - k * 0.6; } });
+    for (const i of arr) grid[i] = null;
+  }
+  async function dropAndFill() {
+    let maxd = 0;
+    const T = nTypes();
+    for (let c = 0; c < N; c++) {
+      let w = N - 1;
+      for (let r = N - 1; r >= 0; r--) {
+        const cell = grid[idx(r, c)];
+        if (cell) { if (w !== r) { cell.oy = r - w; grid[idx(w, c)] = cell; grid[idx(r, c)] = null; if (r - w > maxd) maxd = r - w; } w--; }
+      }
+      for (let r = w; r >= 0; r--) { const n = mk(rnd(T)); n.oy = -(w + 1); grid[idx(r, c)] = n; if (w + 1 > maxd) maxd = w + 1; }
+    }
+    const moving = grid.filter((c) => c && c.oy !== 0) as Cell[];
+    const start = moving.map((c) => c.oy);
+    await tween(120 + 55 * maxd, (k) => { const e = k * k; moving.forEach((c, i) => { c.oy = start[i] * (1 - e); }); });
+    for (const c of moving) c.oy = 0;
+  }
+  async function resolve(swapped: number[] | null) {
+    let chain = 0;
+    while (true) {
+      const { runs, set } = findMatches();
+      if (!set.size) break;
+      chain++;
+      const sp: { i: number; t: number; s: number }[] = [];
+      for (const run of runs) {
+        if (run.cells.length < 4) continue;
+        const piv = (swapped && run.cells.find((i) => swapped!.includes(i))) ?? run.cells[run.cells.length >> 1];
+        sp.push({ i: piv, t: grid[piv]!.t, s: run.cells.length >= 5 ? 3 : (run.h ? 1 : 2) });
+      }
+      swapped = null;
+      for (const p of sp) set.delete(p.i);
+      await clearSet(expand(set), chain);
+      for (const p of sp) {
+        if (grid[p.i] === null) { const n = mk(p.s === 3 ? -1 : p.t, p.s); n.sc = 0; grid[p.i] = n; }
+      }
+      await tween(130, (k) => { for (const p of sp) { const c = grid[p.i]; if (c) c.sc = k; } });
+      await dropAndFill();
+    }
+  }
+  async function doSwap(a: number, b: number) {
+    if (busy || over) return;
+    busy = true; sel = -1; hint = null; clearTimeout(idleT);
+    const ca = grid[a]!, cb = grid[b]!;
+    const dc = (b % N) - (a % N), dr = Math.floor(b / N) - Math.floor(a / N);
+    const ok = validSwap(a, b);
+    await tween(150, (k) => { ca.ox = dc * k; ca.oy = dr * k; cb.ox = -dc * k; cb.oy = -dr * k; });
+    if (!ok) {
+      await tween(150, (k) => { ca.ox = dc * (1 - k); ca.oy = dr * (1 - k); cb.ox = -dc * (1 - k); cb.oy = -dr * (1 - k); });
+      ca.ox = ca.oy = cb.ox = cb.oy = 0;
+      busy = false; armIdle();
+      return;
+    }
+    swapLogic(a, b);
+    ca.ox = ca.oy = cb.ox = cb.oy = 0;
+    moves--; updHud();
+    if (ca.s === 3 || cb.s === 3) {
+      const bomb = ca.s === 3 ? ca : cb, other = bomb === ca ? cb : ca;
+      const set = new Set<number>();
+      for (let i = 0; i < N * N; i++) {
+        const c = grid[i];
+        if (!c) continue;
+        if (c === bomb || c === other || (other.s === 3) || (other.t >= 0 && c.t === other.t)) set.add(i);
+      }
+      await clearSet(expand(set), 1);
+      await dropAndFill();
+      await resolve(null);
+    } else {
+      await resolve([a, b]);
+    }
+    await afterTurn();
+  }
+  async function afterTurn() {
+    if (moves <= 0) { finish(); busy = false; return; }
+    if (!findMove()) {
+      statusEl.textContent = ui.reshuffle; popup(SZ / 2, SZ / 2, ui.reshuffle, true);
+      await tween(250, (k) => { for (const c of grid) if (c) c.sc = 1 - k; });
+      shuffleBoard();
+      await tween(250, (k) => { for (const c of grid) if (c) c.sc = k; });
+      statusEl.textContent = '';
+    }
+    busy = false; armIdle();
+  }
+  function finish() {
+    over = true;
+    const L = LEVELS[lvIdx];
+    const st = score >= L.goal * 2 ? 3 : score >= L.goal * 1.5 ? 2 : score >= L.goal ? 1 : 0;
+    if (st > 0) {
+      if (st > stars[lvIdx]) { stars[lvIdx] = st; saveStars(); }
+      statusEl.textContent = `${ui.win} ${'★'.repeat(st)}${'☆'.repeat(3 - st)}`;
+      nextBtn.hidden = lvIdx >= LEVELS.length - 1;
+    } else {
+      statusEl.textContent = ui.lose;
+    }
+  }
+
+  // ---------- Gợi ý ----------
+  function armIdle() { clearTimeout(idleT); hint = null; idleT = setTimeout(() => { if (!busy && !over) hint = findMove(); }, 6000); }
+
+  // ---------- Vẽ ----------
+  function drawCritter(t: number, x: number, y: number, r: number) {
+    const col = COL[t], dk = DARK[t];
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, r * 0.86, r * 0.78, r * 0.2, 0, 0, 6.283); ctx.fill();
+    // tai / chi tiết sau thân
+    ctx.fillStyle = col; ctx.strokeStyle = dk; ctx.lineWidth = 2;
+    const tri = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number) => { ctx.beginPath(); ctx.moveTo(x1 * r, y1 * r); ctx.lineTo(x2 * r, y2 * r); ctx.lineTo(x3 * r, y3 * r); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+    const dot = (x1: number, y1: number, rr: number) => { ctx.beginPath(); ctx.arc(x1 * r, y1 * r, rr * r, 0, 6.283); ctx.fill(); ctx.stroke(); };
+    if (t === 0) { tri(-0.85, -0.2, -0.7, -1.05, -0.2, -0.7); tri(0.85, -0.2, 0.7, -1.05, 0.2, -0.7); }
+    else if (t === 1) { dot(-0.62, -0.68, 0.3); dot(0.62, -0.68, 0.3); }
+    else if (t === 3) { ctx.fillStyle = '#ff9d2e'; tri(-0.12, -0.85, 0, -1.2, 0.12, -0.85); tri(-0.3, -0.8, -0.28, -1.1, -0.1, -0.82); tri(0.3, -0.8, 0.28, -1.1, 0.1, -0.82); }
+    else if (t === 4) { tri(-0.85, -0.1, -0.78, -1.0, -0.15, -0.72); tri(0.85, -0.1, 0.78, -1.0, 0.15, -0.72); }
+    else if (t === 5) { tri(-0.7, -0.55, -0.88, -1.0, -0.2, -0.8); tri(0.7, -0.55, 0.88, -1.0, 0.2, -0.8); }
+    // thân
+    const gr = ctx.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.1, 0, 0, r * 1.05);
+    gr.addColorStop(0, '#ffffffcc'); gr.addColorStop(0.25, col); gr.addColorStop(1, dk);
+    ctx.fillStyle = gr; ctx.strokeStyle = dk; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(0, 0.05 * r, r * 0.92, r * 0.86, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+    if (t === 2) { // mắt ếch lồi
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = dk;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 0.44 * r, -0.62 * r, 0.3 * r, 0, 6.283); ctx.fill(); ctx.stroke(); }
+    }
+    // má hồng
+    ctx.fillStyle = 'rgba(255,120,140,.45)';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 0.56 * r, 0.22 * r, 0.16 * r, 0.1 * r, 0, 0, 6.283); ctx.fill(); }
+    // mắt
+    const ey = t === 2 ? -0.62 : -0.14, ex = t === 2 ? 0.44 : 0.33, er = t === 2 ? 0.14 : 0.13;
+    ctx.fillStyle = '#26203a';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * ex * r, ey * r, er * r, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = '#fff';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * ex * r - er * r * 0.3, ey * r - er * r * 0.3, er * r * 0.38, 0, 6.283); ctx.fill(); }
+    // mũi / miệng
+    ctx.lineWidth = 2; ctx.strokeStyle = '#26203a';
+    if (t === 0) { ctx.fillStyle = '#ffe3d0'; ctx.beginPath(); ctx.ellipse(0, 0.32 * r, 0.34 * r, 0.24 * r, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#26203a'; ctx.beginPath(); ctx.arc(0, 0.2 * r, 0.09 * r, 0, 6.283); ctx.fill(); }
+    else if (t === 1) { ctx.fillStyle = '#d6ebff'; ctx.beginPath(); ctx.ellipse(0, 0.3 * r, 0.32 * r, 0.24 * r, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#26203a'; ctx.beginPath(); ctx.ellipse(0, 0.22 * r, 0.1 * r, 0.07 * r, 0, 0, 6.283); ctx.fill(); }
+    else if (t === 2) { ctx.beginPath(); ctx.arc(0, 0.12 * r, 0.42 * r, 0.15 * 3.14, 0.85 * 3.14); ctx.stroke(); }
+    else if (t === 3) { ctx.fillStyle = '#ff9d2e'; ctx.beginPath(); ctx.moveTo(-0.17 * r, 0.12 * r); ctx.lineTo(0.17 * r, 0.12 * r); ctx.lineTo(0, 0.4 * r); ctx.closePath(); ctx.fill(); }
+    else if (t === 4) { ctx.fillStyle = '#ff8fb0'; ctx.beginPath(); ctx.arc(0, 0.2 * r, 0.07 * r, 0, 6.283); ctx.fill(); ctx.lineWidth = 1.5; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s * 0.25 * r, 0.24 * r); ctx.lineTo(s * 0.8 * r, 0.16 * r); ctx.moveTo(s * 0.25 * r, 0.3 * r); ctx.lineTo(s * 0.8 * r, 0.36 * r); } ctx.stroke(); }
+    else { ctx.fillStyle = '#ffc4de'; ctx.beginPath(); ctx.ellipse(0, 0.3 * r, 0.3 * r, 0.22 * r, 0, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c4507f'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 0.1 * r, 0.3 * r, 0.05 * r, 0, 6.283); ctx.fill(); } }
+    ctx.restore();
+  }
+  function drawBomb(x: number, y: number, r: number, tm: number) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tm * 0.8);
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = COL[i]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r * 0.92, i * 1.0472, (i + 1) * 1.0472); ctx.closePath(); ctx.fill(); }
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r * 0.92, 0, 6.283); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(0, 0, r * 0.3, 0, 6.283); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.ellipse(x - r * 0.35, y - r * 0.5, r * 0.18, r * 0.1, -0.6, 0, 6.283); ctx.fill();
+  }
+  function drawStripes(s: number, x: number, y: number, r: number) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    for (const o of [-0.4, 0, 0.4]) { ctx.beginPath(); if (s === 1) { ctx.moveTo(-r * 0.62, o * r); ctx.lineTo(r * 0.62, o * r); } else { ctx.moveTo(o * r, -r * 0.62); ctx.lineTo(o * r, r * 0.62); } ctx.stroke(); }
+    ctx.restore();
+  }
+  function rr(x: number, y: number, w: number, h: number, r: number) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+  let last = performance.now();
+  function frame(now: number) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!gameEl.hidden) draw(now / 1000, dt);
+    requestAnimationFrame(frame);
+  }
+  function draw(tm: number, dt: number) {
+    ctx.clearRect(0, 0, SZ, SZ);
+    ctx.save(); rr(0, 0, SZ, SZ, 18); ctx.clip();
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { ctx.fillStyle = (r + c) % 2 ? '#3a3355' : '#443c63'; ctx.fillRect(c * CELL, r * CELL, CELL, CELL); }
+    // ô được chọn / gợi ý
+    const hl = (i: number, a: number) => { ctx.fillStyle = `rgba(255,255,255,${a})`; rr((i % N) * CELL + 3, Math.floor(i / N) * CELL + 3, CELL - 6, CELL - 6, 12); ctx.fill(); };
+    if (sel >= 0) hl(sel, 0.28);
+    for (let i = 0; i < N * N; i++) {
+      const c = grid[i]; if (!c) continue;
+      const x = ((i % N) + 0.5 + c.ox) * CELL, y = (Math.floor(i / N) + 0.5 + c.oy) * CELL;
+      let sc = c.sc;
+      if (i === sel) sc *= 1.08;
+      if (hint && hint.includes(i)) sc *= 1 + 0.1 * Math.sin(tm * 9);
+      if (sc <= 0.01) continue;
+      ctx.save(); ctx.globalAlpha = c.a; ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
+      const r = CELL * 0.4;
+      if (c.s === 3) drawBomb(x, y, r, tm);
+      else {
+        if (c.s) { ctx.fillStyle = `rgba(255,255,255,${0.25 + 0.15 * Math.sin(tm * 5)})`; ctx.beginPath(); ctx.arc(x, y, r * 1.15, 0, 6.283); ctx.fill(); }
+        drawCritter(c.t, x, y, r);
+        if (c.s) drawStripes(c.s, x, y, r);
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+    // hạt
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
+      p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // chữ điểm
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p = pops[i]; p.life -= dt * (p.big ? 0.8 : 1.1); if (p.life <= 0) { pops.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.min(1, p.life * 2);
+      ctx.font = `800 ${p.big ? 40 : 26}px system-ui, sans-serif`;
+      const yy = p.y - (1 - p.life) * 50;
+      ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(30,20,60,.85)'; ctx.strokeText(p.txt, p.x, yy);
+      ctx.fillStyle = p.big ? '#ffd23f' : '#fff'; ctx.fillText(p.txt, p.x, yy);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- Giao diện ----------
+  function updHud() {
+    const L = LEVELS[lvIdx];
+    $('m3-mv').textContent = String(moves); $('m3-sc').textContent = String(score);
+    ($('m3-fill') as HTMLElement).style.width = Math.min(100, (score / (L.goal * 2)) * 100) + '%';
+  }
+  function buildMenu() {
+    const box = $('m3-levels'); box.innerHTML = '';
+    let total = 0;
+    LEVELS.forEach((L, i) => {
+      total += stars[i];
+      const open = i === 0 || stars[i - 1] > 0;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'bd-opt m3-lv'; b.disabled = !open;
+      if (!open) b.title = ui.locked;
+      b.innerHTML = `<b>${i + 1}</b><span>${'★'.repeat(stars[i])}${'☆'.repeat(3 - stars[i])}</span>`;
+      b.addEventListener('click', () => startLevel(i));
+      box.appendChild(b);
+    });
+    $('m3-stat').textContent = `${ui.stars}: ${total} / ${LEVELS.length * 3}`;
+  }
+  function startLevel(i: number) {
+    clearTimeout(idleT);
+    lvIdx = i; const L = LEVELS[i];
+    moves = L.moves; score = 0; over = false; busy = false; sel = -1; hint = null;
+    parts.length = 0; pops.length = 0;
+    fillBoard();
+    $('m3-lv').textContent = String(i + 1); $('m3-goal').textContent = String(L.goal);
+    statusEl.textContent = ''; nextBtn.hidden = true;
+    menu.hidden = true; gameEl.hidden = false; updHud(); armIdle();
+  }
+  $('m3-restart').addEventListener('click', () => { if (!busy || over) startLevel(lvIdx); });
+  nextBtn.addEventListener('click', () => { if (lvIdx < LEVELS.length - 1) startLevel(lvIdx + 1); });
+  $('m3-back').addEventListener('click', () => { clearTimeout(idleT); busy = false; gameEl.hidden = true; menu.hidden = false; buildMenu(); });
+
+  // ---------- Điều khiển ----------
+  const cellAt = (e: PointerEvent) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * SZ, y = ((e.clientY - rect.top) / rect.height) * SZ;
+    const c = Math.floor(x / CELL), r = Math.floor(y / CELL);
+    return c < 0 || c >= N || r < 0 || r >= N ? -1 : idx(r, c);
+  };
+  let drag: { x: number; y: number; i: number } | null = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (busy || over) return;
+    const i = cellAt(e); if (i < 0) return;
+    e.preventDefault(); armIdle();
+    if (sel >= 0 && adjacent(sel, i)) { const s = sel; sel = -1; drag = null; doSwap(s, i); return; }
+    sel = sel === i ? -1 : i;
+    drag = { x: e.clientX, y: e.clientY, i };
+    try { canvas.setPointerCapture(e.pointerId); } catch {}
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag || busy || over) return;
+    const rect = canvas.getBoundingClientRect();
+    const cp = rect.width / N;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < cp * 0.35) return;
+    const r = Math.floor(drag.i / N), c = drag.i % N;
+    let nr = r, nc = c;
+    if (Math.abs(dx) > Math.abs(dy)) nc += dx > 0 ? 1 : -1; else nr += dy > 0 ? 1 : -1;
+    const from = drag.i; drag = null; sel = -1;
+    if (nr < 0 || nr >= N || nc < 0 || nc >= N) return;
+    doSwap(from, idx(nr, nc));
+  });
+  const endDrag = () => { drag = null; };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  buildMenu();
+  requestAnimationFrame(frame);
+
+  if (location.hash.includes('debug')) {
+    (window as any).__m3 = {
+      start: startLevel, findMove, doSwap, setFast: (v: boolean) => { fast = v; },
+      state: () => ({ moves, score, over, busy, goal: LEVELS[lvIdx].goal }),
+      matches: () => findMatches().set.size,
+      full: () => grid.every(Boolean),
+      async bot(level: number) {
+        fast = true; startLevel(level);
+        let guard = 0;
+        while (!over && guard++ < 200) { const m = findMove(); if (!m) break; await doSwap(m[0], m[1]); }
+        fast = false;
+        return { score, goal: LEVELS[level].goal, moves, full: grid.every(Boolean), matches: findMatches().set.size };
+      },
+    };
+  }
+</script>
+
+<style is:global>
+  #m3 { max-width: 620px; margin: 0 auto; }
+  .m3-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; margin: 10px 0 18px; }
+  .m3-lv { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; }
+  .m3-lv b { font-size: 1.3rem; }
+  .m3-lv span { color: #ffcf33; font-size: .85rem; letter-spacing: 1px; }
+  .m3-lv:disabled { opacity: .4; cursor: not-allowed; }
+  .m3-hud { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; text-align: center; }
+  .m3-hud div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 4px; }
+  .m3-hud span { display: block; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+  .m3-hud b { font-size: 1.15rem; }
+  .m3-bar { position: relative; height: 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); margin-bottom: 10px; overflow: hidden; }
+  .m3-bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #4fd066, #ffcf33); transition: width .25s; }
+  .m3-bar u { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.7); }
+  .m3-bar u.a { left: 50%; } .m3-bar u.b { left: 75%; }
+  #m3-canvas { display: block; width: min(100%, 576px); height: auto; aspect-ratio: 1; margin: 0 auto; border-radius: 18px; touch-action: none; user-select: none; box-shadow: 0 8px 28px rgba(0,0,0,.35); cursor: pointer; }
+</style>

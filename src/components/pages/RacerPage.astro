@@ -1,0 +1,714 @@
+﻿---
+import Base from '../../layouts/Base.astro';
+import { lp, type Lang } from '../../i18n';
+import { gamesUi } from '../../data/games';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const g = gamesUi[lang];
+
+// Chữ hiển thị của game Đua Xe (/game/racer/). Xóa game thì xóa luôn file này.
+const TXT = {
+  vi: {
+    title: 'Đua Xe',
+    sub: 'Đua xe nhìn từ trên xuống: drift qua khúc cua, tận dụng ô tăng tốc và về nhất sau 3 vòng trước 3 xe máy.',
+    pickTrack: 'Chọn đường đua',
+    tracks: ['Đồng Cỏ', 'Sa Mạc', 'Núi Lửa'],
+    trackDesc: ['Đường rộng, nhiều khúc cua dễ', 'Có cua gấp kiểu kẹp tóc', 'Đường ngoằn ngoèo, rất kỹ thuật'],
+    pickLevel: 'Độ khó của máy',
+    levels: ['Dễ', 'Thường', 'Khó'],
+    start: 'Bắt đầu đua',
+    keys: 'Mũi tên hoặc WASD để lái, Space để phanh tay (drift). Ô vàng trên đường giúp tăng tốc. Ra khỏi đường sẽ bị chậm lại. Trên điện thoại dùng các nút bên dưới. P hoặc Esc để tạm dừng.',
+    cars: ['Bạn', 'Xanh', 'Vàng', 'Tím'],
+    lap: 'Vòng', go: 'Xuất phát!', wrong: 'Ngược chiều!', paused: 'Tạm dừng', resume: 'Tiếp tục',
+    place: ['Nhất', 'Nhì', 'Ba', 'Bốn'],
+    resultTitle: (p: number) => (p === 0 ? 'Bạn về nhất! 🏆' : p === 1 ? 'Bạn về nhì' : p === 2 ? 'Bạn về ba' : 'Bạn về cuối'),
+    raceTime: 'Thời gian', bestLapL: 'Vòng nhanh nhất', record: '🏆 Kỷ lục mới!', again: 'Đua lại', change: 'Đổi đường đua',
+    best: 'Kỷ lục', lapBest: 'vòng', raceBest: 'trận', kmh: 'km/h', gas: 'Ga', brake: 'Phanh',
+  },
+  en: {
+    title: 'Top-down Racer',
+    sub: 'Top-down racing: drift through the corners, use the boost pads and beat 3 AI cars over 3 laps.',
+    pickTrack: 'Choose a track',
+    tracks: ['Meadow', 'Desert', 'Volcano'],
+    trackDesc: ['Wide road, easy corners', 'Has tight hairpins', 'Twisty and very technical'],
+    pickLevel: 'Opponent level',
+    levels: ['Easy', 'Normal', 'Hard'],
+    start: 'Start race',
+    keys: 'Arrow keys or WASD to steer, Space for the handbrake (drift). Yellow pads on the road give a speed boost. Leaving the road slows you down. On a phone use the buttons below. P or Esc to pause.',
+    cars: ['You', 'Blue', 'Yellow', 'Purple'],
+    lap: 'Lap', go: 'Go!', wrong: 'Wrong way!', paused: 'Paused', resume: 'Resume',
+    place: ['1st', '2nd', '3rd', '4th'],
+    resultTitle: (p: number) => (p === 0 ? 'You win! 🏆' : p === 1 ? 'You finished 2nd' : p === 2 ? 'You finished 3rd' : 'You finished last'),
+    raceTime: 'Race time', bestLapL: 'Best lap', record: '🏆 New record!', again: 'Race again', change: 'Change track',
+    best: 'Best', lapBest: 'lap', raceBest: 'race', kmh: 'km/h', gas: 'Gas', brake: 'Brake',
+  },
+};
+const t = TXT[lang];
+// Hàm không gửi xuống trình duyệt được nên tách ra một object chữ thuần
+const ui = { ...t, resultTitle: [0, 1, 2, 3].map((i) => t.resultTitle(i)) };
+---
+<Base lang={lang} title={t.title} description={t.sub} noindex wide>
+  <p class="meta"><a href={lp(lang, '/game/')}>{g.back}</a></p>
+  <h1>{t.title}</h1>
+  <p class="meta">{t.sub}</p>
+
+  <div id="racer" data-ui={JSON.stringify(ui)}>
+    <div id="rc-menu">
+      <h2 class="bd-h">{t.pickTrack}</h2>
+      <div class="rc-tracks">
+        {t.tracks.map((n, i) => (
+          <button type="button" class={`bd-opt rc-track${i === 0 ? ' sel' : ''}`} data-track={i}>
+            <b>{n}</b><small>{t.trackDesc[i]}</small>
+          </button>
+        ))}
+      </div>
+      <h2 class="bd-h">{t.pickLevel}</h2>
+      <div class="bd-row">
+        {t.levels.map((l, i) => <button type="button" class={`bd-opt${i === 1 ? ' sel' : ''}`} data-level={i}>{l}</button>)}
+      </div>
+      <p class="bd-stat" id="rc-stat"></p>
+      <button class="btn" type="button" id="rc-start">▶ {t.start}</button>
+      <p class="meta">{t.keys}</p>
+    </div>
+
+    <div id="rc-game" hidden>
+      <div class="rc-stage">
+        <canvas id="rc-canvas" width="800" height="450" aria-label={t.title}></canvas>
+        <div class="rc-ov" id="rc-pause" hidden>
+          <h2>{t.paused}</h2>
+          <button class="btn" type="button" id="rc-resume">{t.resume}</button>
+        </div>
+        <div class="rc-ov" id="rc-result" hidden>
+          <div class="rc-big" id="rc-msg"></div>
+          <p class="rc-sum" id="rc-sum"></p>
+          <div class="rc-actions">
+            <button type="button" class="btn" id="rc-again">{t.again}</button>
+            <button type="button" class="btn ghost" id="rc-change">{t.change}</button>
+          </div>
+        </div>
+      </div>
+      <div class="rc-pad" id="rc-pad">
+        <div class="rc-grp">
+          <button type="button" id="rc-l" aria-label="Left">◀</button>
+          <button type="button" id="rc-r" aria-label="Right">▶</button>
+        </div>
+        <button type="button" class="rc-small" id="rc-pausebtn" aria-label={t.paused}>⏸</button>
+        <div class="rc-grp">
+          <button type="button" id="rc-b">{t.brake}</button>
+          <button type="button" id="rc-g" class="go">{t.gas}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  type V = [number, number];
+  const root = document.getElementById('racer') as HTMLElement;
+  const ui = JSON.parse(root.dataset.ui || '{}');
+  const menu = document.getElementById('rc-menu') as HTMLElement;
+  const gameEl = document.getElementById('rc-game') as HTMLElement;
+  const canvas = document.getElementById('rc-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const pauseOv = document.getElementById('rc-pause') as HTMLElement;
+  const resultOv = document.getElementById('rc-result') as HTMLElement;
+  const W = 800, H = 450;
+  const DEBUG = location.hash.includes('debug');
+
+  const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+  const wrapA = (a: number) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
+  const mulberry = (s: number) => () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const fmt = (s: number) => { if (!isFinite(s)) return '--'; const m = Math.floor(s / 60); const r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(2)}`; };
+
+  // ---------- Đường đua ----------
+  const ALAT = 520;     // gia tốc ngang mà máy cho phép khi vào cua
+  const TOP = 470;      // tốc độ tối đa trên đường
+  const BRAKE = 700;
+  const LAPS = 3;
+  const THEMES = [
+    { grass: '#4f9d3f', grass2: '#5db04a', grass3: '#3f8434', road: '#4b4f58', kerbA: '#e5e7eb', kerbB: '#dc2626', run: 'rgba(120,100,70,.55)', prop: 'tree' },
+    { grass: '#d9b46c', grass2: '#e6c47c', grass3: '#c79f55', road: '#55504a', kerbA: '#f5efe0', kerbB: '#c2410c', run: 'rgba(150,100,50,.5)', prop: 'cactus' },
+    { grass: '#2b1d22', grass2: '#3a262b', grass3: '#1f1418', road: '#3b3d46', kerbA: '#e5e7eb', kerbB: '#f97316', run: 'rgba(0,0,0,.5)', prop: 'rock' },
+  ];
+  const DEFS: { pts: V[]; w: number; pads: number[] }[] = [
+    { w: 215, pads: [0.2, 0.62], pts: [[-760, 40], [-560, -380], [-120, -470], [320, -360], [760, -400], [900, 0], [600, 330], [160, 220], [-60, 450], [-540, 460]] },
+    { w: 205, pads: [0.1, 0.45, 0.8], pts: [[-860, -320], [-340, -480], [200, -470], [650, -270], [760, 120], [420, 320], [90, 100], [-160, 330], [-540, 480], [-900, 220]] },
+    { w: 195, pads: [0.15, 0.5, 0.78], pts: [[-980, 20], [-640, -380], [-260, -170], [20, -480], [440, -470], [860, -260], [920, 160], [540, 270], [400, 540], [-40, 430], [-300, 590], [-760, 460]] },
+  ];
+
+  interface Track {
+    N: number; ds: number; L: number; W: number; theme: typeof THEMES[0];
+    X: Float32Array; Y: Float32Array; A: Float32Array; VC: Float32Array;
+    bg: HTMLCanvasElement; bx: number; by: number; bw: number; bh: number;
+    pads: { x: number; y: number; a: number }[];
+    minX: number; minY: number; maxX: number; maxY: number;
+  }
+
+  function catmull(p0: V, p1: V, p2: V, p3: V, t: number): V {
+    const t2 = t * t, t3 = t2 * t;
+    const f = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+    return [f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])];
+  }
+
+  function buildTrack(ti: number): Track {
+    const def = DEFS[ti], theme = THEMES[ti], P = def.pts, n = P.length;
+    const dense: V[] = [];
+    for (let i = 0; i < n; i++) {
+      for (let k = 0; k < 24; k++) dense.push(catmull(P[(i - 1 + n) % n], P[i], P[(i + 1) % n], P[(i + 2) % n], k / 24));
+    }
+    const m = dense.length;
+    const cum = [0];
+    for (let j = 0; j < m; j++) { const a = dense[j], b = dense[(j + 1) % m]; cum.push(cum[j] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+    const L = cum[m];
+    const N = Math.round(L / 8), ds = L / N;
+    const X = new Float32Array(N), Y = new Float32Array(N), A = new Float32Array(N), VC = new Float32Array(N);
+    let p = 0;
+    for (let i = 0; i < N; i++) {
+      const s = i * ds;
+      while (p < m - 1 && cum[p + 1] < s) p++;
+      const a = dense[p], b = dense[(p + 1) % m];
+      const u = (s - cum[p]) / Math.max(1e-6, cum[p + 1] - cum[p]);
+      X[i] = a[0] + (b[0] - a[0]) * u; Y[i] = a[1] + (b[1] - a[1]) * u;
+    }
+    const md = (i: number) => ((i % N) + N) % N;
+    for (let i = 0; i < N; i++) A[i] = Math.atan2(Y[md(i + 1)] - Y[md(i - 1)], X[md(i + 1)] - X[md(i - 1)]);
+    for (let i = 0; i < N; i++) {
+      const k = Math.abs(wrapA(A[md(i + 3)] - A[md(i - 3)])) / (6 * ds);
+      VC[i] = Math.min(900, Math.sqrt(ALAT / Math.max(k, 1e-4)));
+    }
+    // làm mượt tốc độ vào cua để xe máy bắt đầu phanh sớm và nhất quán
+    const tmp = new Float32Array(N);
+    for (let i = 0; i < N; i++) { let mn = 1e9; for (let j = -4; j <= 4; j++) mn = Math.min(mn, VC[md(i + j)]); tmp[i] = mn; }
+    VC.set(tmp);
+
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (let i = 0; i < N; i++) { minX = Math.min(minX, X[i]); maxX = Math.max(maxX, X[i]); minY = Math.min(minY, Y[i]); maxY = Math.max(maxY, Y[i]); }
+    const margin = 360;
+    const bx = Math.floor(minX - margin), by = Math.floor(minY - margin);
+    const bw = Math.ceil(maxX + margin - bx), bh = Math.ceil(maxY + margin - by);
+    const bg = document.createElement('canvas'); bg.width = bw; bg.height = bh;
+    const g = bg.getContext('2d')!;
+    const rnd = mulberry(ti * 977 + 13);
+    g.fillStyle = theme.grass; g.fillRect(0, 0, bw, bh);
+    for (let i = 0; i < 520; i++) {
+      const x = rnd() * bw, y = rnd() * bh, r = 30 + rnd() * 110;
+      g.fillStyle = rnd() < 0.5 ? theme.grass2 : theme.grass3; g.globalAlpha = 0.35;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+    g.globalAlpha = 1;
+    if (ti === 2) { // vết nứt dung nham phát sáng
+      for (let i = 0; i < 70; i++) {
+        let x = rnd() * bw, y = rnd() * bh; g.strokeStyle = 'rgba(255,120,30,.55)'; g.lineWidth = 2 + rnd() * 3; g.beginPath(); g.moveTo(x, y);
+        for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * 90; y += (rnd() - 0.5) * 90; g.lineTo(x, y); }
+        g.stroke();
+      }
+    }
+    // đường: viền bãi, kerb, nhựa
+    const path = () => { g.beginPath(); g.moveTo(X[0] - bx, Y[0] - by); for (let i = 1; i < N; i++) g.lineTo(X[i] - bx, Y[i] - by); g.closePath(); };
+    g.lineJoin = 'round'; g.lineCap = 'butt';
+    path(); g.strokeStyle = theme.run; g.lineWidth = def.w + 70; g.stroke();
+    path(); g.strokeStyle = theme.kerbA; g.lineWidth = def.w + 26; g.stroke();
+    path(); g.strokeStyle = theme.kerbB; g.lineWidth = def.w + 26; g.setLineDash([22, 22]); g.stroke(); g.setLineDash([]);
+    path(); g.strokeStyle = theme.road; g.lineWidth = def.w; g.stroke();
+    path(); g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = def.w - 40; g.stroke();
+    path(); g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 3; g.setLineDash([24, 26]); g.stroke(); g.setLineDash([]);
+    // vạch xuất phát
+    g.save(); g.translate(X[0] - bx, Y[0] - by); g.rotate(A[0]);
+    const cell = 10, cols = Math.floor(def.w / cell);
+    for (let r = 0; r < 2; r++) for (let c = 0; c < cols; c++) { g.fillStyle = (r + c) % 2 ? '#111' : '#f8fafc'; g.fillRect(r * cell - cell, c * cell - (cols * cell) / 2, cell, cell); }
+    g.restore();
+    // ô tăng tốc
+    const pads = def.pads.map((f) => { const i = Math.round(N * f) % N; return { x: X[i], y: Y[i], a: A[i] }; });
+    for (const pd of pads) {
+      g.save(); g.translate(pd.x - bx, pd.y - by); g.rotate(pd.a);
+      g.fillStyle = 'rgba(15,23,42,.55)'; g.fillRect(-34, -30, 68, 60);
+      g.strokeStyle = '#facc15'; g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round';
+      for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(k * 20 - 8, -18); g.lineTo(k * 20 + 6, 0); g.lineTo(k * 20 - 8, 18); g.stroke(); }
+      g.restore();
+    }
+    // cảnh vật hai bên đường
+    for (let i = 0; i < 420; i++) {
+      const x = minX - margin + 40 + rnd() * (maxX - minX + 2 * margin - 80), y = minY - margin + 40 + rnd() * (maxY - minY + 2 * margin - 80);
+      let ok = true;
+      for (let k = 0; k < N; k += 2) { const dx = X[k] - x, dy = Y[k] - y; if (dx * dx + dy * dy < (def.w / 2 + 80) * (def.w / 2 + 80)) { ok = false; break; } }
+      if (!ok) continue;
+      const px = x - bx, py = y - by;
+      g.fillStyle = 'rgba(0,0,0,.22)';
+      if (theme.prop === 'tree') {
+        const r = 14 + rnd() * 12; g.beginPath(); g.arc(px + 5, py + 6, r, 0, 7); g.fill();
+        g.fillStyle = '#2f7a2b'; g.beginPath(); g.arc(px, py, r, 0, 7); g.fill();
+        g.fillStyle = '#4caf3f'; g.beginPath(); g.arc(px - r * 0.25, py - r * 0.25, r * 0.65, 0, 7); g.fill();
+      } else if (theme.prop === 'cactus') {
+        g.fillRect(px - 4, py - 2, 14, 14);
+        g.fillStyle = '#4d8a3a'; g.beginPath(); g.arc(px, py, 9, 0, 7); g.fill();
+        g.fillStyle = '#6aab4f'; g.beginPath(); g.arc(px - 2, py - 2, 5, 0, 7); g.fill();
+      } else {
+        const r = 10 + rnd() * 16; g.beginPath(); g.arc(px + 4, py + 5, r, 0, 7); g.fill();
+        g.fillStyle = '#4a4046'; g.beginPath(); g.arc(px, py, r, 0, 7); g.fill();
+        g.fillStyle = '#6a5d64'; g.beginPath(); g.arc(px - r * 0.3, py - r * 0.3, r * 0.5, 0, 7); g.fill();
+      }
+    }
+    return { N, ds, L, W: def.w, theme, X, Y, A, VC, bg, bx, by, bw, bh, pads, minX, minY, maxX, maxY };
+  }
+
+  // ---------- Xe ----------
+  interface Car {
+    i: number; name: string; color: string; isPlayer: boolean;
+    x: number; y: number; a: number; vx: number; vy: number; steer: number;
+    thr: number; brk: number; hb: boolean; boosting: number; padCd: number[];
+    idx: number; lastIdx: number; pidx: number; dist: number; offroad: boolean;
+    lapStart: number; laps: number[]; finished: boolean; finT: number;
+    skidL: V | null; skidR: V | null; slip: number;
+    skill: number; off: number; phase: number; mistakeIn: number; mistakeT: number; mistakeDir: number;
+    offT: number; stuckT: number; auto: boolean;
+  }
+  const COLORS = ['#ef4444', '#3b82f6', '#facc15', '#a855f7'];
+  const LV_SKILL = [0.72, 0.8, 0.92];
+  const AI_SKILL = [0.98, 1.0, 0.95];
+
+  let track!: Track;
+  let trackIdx = 0, level = 1;
+  let cars: Car[] = [];
+  let player!: Car;
+  let phase: 'menu' | 'count' | 'race' = 'menu';
+  let paused = false;
+  let clock = -3.2;            // âm là đang đếm ngược
+  let raceT = 0;
+  let playerRank = -1;
+  let particles: { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; col: string }[] = [];
+  let camX = 0, camY = 0, camS = 1;
+  let rng = mulberry(7);
+  let wrongT = 0;
+  let resultShown = false;
+
+  // bản ghi kỷ lục
+  type Rec = { lap: number; race: number };
+  let rec: Rec[] = [{ lap: Infinity, race: Infinity }, { lap: Infinity, race: Infinity }, { lap: Infinity, race: Infinity }];
+  try { const s = JSON.parse(localStorage.getItem('race-best') || 'null'); if (Array.isArray(s)) rec = rec.map((d, i) => ({ lap: s[i]?.lap ?? d.lap, race: s[i]?.race ?? d.race })); } catch {}
+  const saveRec = () => { try { localStorage.setItem('race-best', JSON.stringify(rec.map((r) => ({ lap: isFinite(r.lap) ? r.lap : null, race: isFinite(r.race) ? r.race : null })))); } catch {} };
+  const paintStat = () => {
+    const r = rec[trackIdx];
+    (document.getElementById('rc-stat') as HTMLElement).textContent = isFinite(r.race) || isFinite(r.lap) ? `${ui.best}: ${ui.lapBest} ${fmt(r.lap)} · ${ui.raceBest} ${fmt(r.race)}` : '';
+  };
+
+  function newCar(i: number, slot: number): Car {
+    const idxStart = track.N - 5 - 6 * Math.floor(slot / 2);
+    const side = slot % 2 ? 1 : -1;
+    const a = track.A[idxStart];
+    const x = track.X[idxStart] + -Math.sin(a) * side * track.W * 0.2, y = track.Y[idxStart] + Math.cos(a) * side * track.W * 0.2;
+    return {
+      i, name: ui.cars[i], color: COLORS[i], isPlayer: i === 0, x, y, a, vx: 0, vy: 0, steer: 0,
+      thr: 0, brk: 0, hb: false, boosting: 0, padCd: track.pads.map(() => 0),
+      idx: idxStart, lastIdx: idxStart, pidx: idxStart - track.N, dist: 0, offroad: false,
+      lapStart: 0, laps: [], finished: false, finT: 0, skidL: null, skidR: null, slip: 0,
+      skill: LV_SKILL[level] * AI_SKILL[i - 1 >= 0 ? i - 1 : 0], off: (i - 2) * 22, phase: rng() * 6, mistakeIn: 5 + rng() * 8, mistakeT: 0, mistakeDir: 1,
+      offT: 0, stuckT: 0, auto: false,
+    };
+  }
+
+  function startRace(ti: number, lv: number) {
+    trackIdx = ti; level = lv;
+    track = buildTrack(ti);
+    rng = mulberry(31 + ti);
+    const slots = [2, 0, 1, 3];
+    cars = [0, 1, 2, 3].map((i) => newCar(i, slots[i]));
+    player = cars[0];
+    particles = []; clock = -3.2; raceT = 0; playerRank = -1; resultShown = false; wrongT = 0; paused = false;
+    phase = 'count';
+    camX = player.x; camY = player.y; camS = 1;
+    resultOv.hidden = true; pauseOv.hidden = true;
+    menu.hidden = true; gameEl.hidden = false;
+  }
+
+  // ---------- Nhập liệu ----------
+  const keys: Record<string, boolean> = {};
+  const touch = { l: false, r: false, g: false, b: false };
+  const isK = (...n: string[]) => n.some((k) => keys[k]);
+  addEventListener('keydown', (e) => {
+    if (phase === 'menu') return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { if (!resultShown) togglePause(); return; }
+    keys[e.key.toLowerCase()] = true; if (e.key.startsWith('Arrow')) keys[e.key] = true;
+  });
+  addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; if (e.key.startsWith('Arrow')) keys[e.key] = false; });
+  addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (phase !== 'menu' && !resultShown) setPause(true); });
+  function setPause(v: boolean) { if (phase === 'menu' || resultShown) return; paused = v; pauseOv.hidden = !v; }
+  function togglePause() { setPause(!paused); }
+
+  function bindBtn(id: string, k: 'l' | 'r' | 'g' | 'b') {
+    const el = document.getElementById(id) as HTMLElement;
+    const on = (e: PointerEvent) => { e.preventDefault(); touch[k] = true; el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch {} };
+    const off = () => { touch[k] = false; el.classList.remove('on'); };
+    el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  bindBtn('rc-l', 'l'); bindBtn('rc-r', 'r'); bindBtn('rc-g', 'g'); bindBtn('rc-b', 'b');
+
+  // ---------- Vật lý ----------
+  function nearest(c: Car) {
+    const { N, X, Y } = track;
+    let best = 1e18, bi = c.idx;
+    for (let j = -30; j <= 30; j++) {
+      const i = (((c.idx + j) % N) + N) % N;
+      const dx = X[i] - c.x, dy = Y[i] - c.y, d = dx * dx + dy * dy;
+      if (d < best) { best = d; bi = i; }
+    }
+    c.idx = bi; c.dist = Math.sqrt(best);
+  }
+
+  function emit(x: number, y: number, vx: number, vy: number, life: number, size: number, col: string) {
+    if (particles.length > 320) return;
+    particles.push({ x, y, vx, vy, life, max: life, size, col });
+  }
+
+  function stepCar(c: Car, dt: number) {
+    const fx = Math.cos(c.a), fy = Math.sin(c.a), rx = -fy, ry = fx;
+    let vf = c.vx * fx + c.vy * fy, vl = c.vx * rx + c.vy * ry;
+    const vmax = c.offroad ? 300 : (c.isPlayer ? TOP * 0.9 : TOP);
+    if (c.thr > 0) vf += c.thr * 430 * Math.max(0, 1 - vf / vmax) * dt;
+    if (c.brk > 0) { if (vf > 6) vf -= BRAKE * c.brk * dt; else vf = Math.max(-140, vf - 260 * c.brk * dt); }
+    vf -= vf * (c.offroad ? 1.0 : 0.22) * dt;
+    if (vf > vmax) vf -= (vf - vmax) * 3 * dt;
+    if (!c.thr && !c.brk && Math.abs(vf) > 2) vf -= Math.sign(vf) * 70 * dt;
+    let grip = c.isPlayer ? 9.5 : 7.5;
+    const drifting = c.hb || (c.brk > 0 && vf > 150 && Math.abs(c.steer) > 0.3);
+    if (drifting) grip = c.isPlayer ? 3.2 : 2.1; else if (c.offroad) grip = 4.5;
+    vl *= Math.exp(-grip * dt);
+    c.vx = fx * vf + rx * vl; c.vy = fy * vf + ry * vl;
+    const sr = 2.75 * c.steer * clamp(vf / 110, -1, 1) * (1 - 0.3 * clamp(Math.abs(vf) / TOP, 0, 1)) * (c.hb ? 1.3 : 1);
+    c.a += sr * dt;
+    c.x += c.vx * dt; c.y += c.vy * dt;
+    c.slip = Math.abs(vl);
+    c.boosting = Math.max(0, c.boosting - dt);
+
+    const prev = c.idx;
+    nearest(c);
+    c.offroad = c.dist > track.W / 2 + 12;
+    // hàng rào mềm: không cho đi quá xa khỏi đường
+    const lim = track.W / 2 + 150;
+    if (c.dist > lim) {
+      const dx = c.x - track.X[c.idx], dy = c.y - track.Y[c.idx], d = Math.hypot(dx, dy) || 1;
+      const nx = dx / d, ny = dy / d;
+      c.x = track.X[c.idx] + nx * lim; c.y = track.Y[c.idx] + ny * lim;
+      const dot = c.vx * nx + c.vy * ny;
+      if (dot > 0) { c.vx -= nx * dot * 1.4; c.vy -= ny * dot * 1.4; }
+    }
+    // tiến độ
+    let d = c.idx - c.lastIdx; const N = track.N;
+    if (d > N / 2) d -= N; else if (d < -N / 2) d += N;
+    const before = Math.floor(c.pidx / N);
+    c.pidx += d; c.lastIdx = c.idx;
+    const after = Math.floor(c.pidx / N);
+    if (after > before && !c.finished) {
+      if (after === 0) c.lapStart = clock;
+      else {
+        c.laps.push(clock - c.lapStart); c.lapStart = clock;
+        if (after >= LAPS) { c.finished = true; c.finT = clock; if (c.isPlayer) onPlayerFinish(); }
+      }
+    }
+    void prev;
+    if (c.offroad) c.offT += dt;
+    if (Math.hypot(c.vx, c.vy) < 15 && phase === 'race') c.stuckT += dt; else c.stuckT = 0;
+
+    // ô tăng tốc
+    for (let k = 0; k < track.pads.length; k++) {
+      c.padCd[k] = Math.max(0, c.padCd[k] - dt);
+      const pd = track.pads[k];
+      if (c.padCd[k] === 0 && Math.hypot(pd.x - c.x, pd.y - c.y) < 40) {
+        c.padCd[k] = 2; c.boosting = 1.1;
+        const sp = Math.hypot(c.vx, c.vy);
+        const add = Math.min(190, Math.max(0, 600 - sp));
+        c.vx += Math.cos(c.a) * add; c.vy += Math.sin(c.a) * add;
+      }
+    }
+    // hiệu ứng
+    const sp = Math.hypot(c.vx, c.vy);
+    const bxw = -Math.cos(c.a) * 12, byw = -Math.sin(c.a) * 12;
+    if (c.slip > 70 && sp > 110) {
+      const sx = -Math.sin(c.a) * 7, sy = Math.cos(c.a) * 7;
+      const L: V = [c.x + bxw + sx, c.y + byw + sy], R: V = [c.x + bxw - sx, c.y + byw - sy];
+      const g = track.bg.getContext('2d')!;
+      g.strokeStyle = 'rgba(10,10,12,.2)'; g.lineWidth = 3.4; g.lineCap = 'round';
+      if (c.skidL) { g.beginPath(); g.moveTo(c.skidL[0] - track.bx, c.skidL[1] - track.by); g.lineTo(L[0] - track.bx, L[1] - track.by); g.stroke(); }
+      if (c.skidR) { g.beginPath(); g.moveTo(c.skidR[0] - track.bx, c.skidR[1] - track.by); g.lineTo(R[0] - track.bx, R[1] - track.by); g.stroke(); }
+      c.skidL = L; c.skidR = R;
+      if (Math.random() < 0.6) emit(L[0], L[1], (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, 0.5, 5 + Math.random() * 5, 'rgba(235,235,235,.5)');
+    } else { c.skidL = null; c.skidR = null; }
+    if (c.offroad && sp > 60 && Math.random() < 0.7) {
+      const col = track.theme.grass3;
+      emit(c.x + bxw, c.y + byw, (Math.random() - 0.5) * 50 - c.vx * 0.1, (Math.random() - 0.5) * 50 - c.vy * 0.1, 0.6, 4 + Math.random() * 5, col);
+    }
+    if (c.boosting > 0) emit(c.x + bxw * 1.3, c.y + byw * 1.3, -c.vx * 0.2 + (Math.random() - 0.5) * 40, -c.vy * 0.2 + (Math.random() - 0.5) * 40, 0.35, 4 + Math.random() * 3, Math.random() < 0.5 ? '#fbbf24' : '#f97316');
+  }
+
+  // ---------- Máy lái ----------
+  function aiDrive(c: Car, dt: number, rubber: number) {
+    const { N, X, Y, A, VC, ds } = track;
+    const sp = Math.hypot(c.vx, c.vy);
+    const look = Math.ceil((60 + sp * 0.26) / ds);
+    const ti = (c.idx + look) % N;
+    const wob = c.off + Math.sin(clock * 0.45 + c.phase) * 16;
+    const tx = X[ti] + -Math.sin(A[ti]) * wob, ty = Y[ti] + Math.cos(A[ti]) * wob;
+    const diff = wrapA(Math.atan2(ty - c.y, tx - c.x) - c.a);
+    let st = clamp(diff * 2.4, -1, 1);
+    c.mistakeIn -= dt;
+    if (c.mistakeIn <= 0 && c.mistakeT <= 0) { c.mistakeT = 0.55; c.mistakeDir = rng() < 0.5 ? -1 : 1; c.mistakeIn = 7 + rng() * 9; }
+    if (c.mistakeT > 0) { c.mistakeT -= dt; st = clamp(st + c.mistakeDir * 0.45, -1, 1); }
+    c.steer += (st - c.steer) * Math.min(1, dt * 12);
+    // tốc độ mục tiêu theo cua phía trước
+    let vt = TOP;
+    for (let j = 0; j < 80; j += 2) { const i = (c.idx + j) % N; const v = Math.sqrt(VC[i] * VC[i] + 2 * BRAKE * 0.8 * j * ds); if (v < vt) vt = v; }
+    vt = Math.min(vt, TOP * 0.99) * c.skill * rubber;
+    if (c.offroad) vt = Math.min(vt, 200);
+    c.hb = false;
+    if (sp < vt) { c.thr = 1; c.brk = 0; }
+    else if (sp > vt * 1.06) { c.thr = 0; c.brk = clamp((sp - vt) / 90, 0.2, 1); }
+    else { c.thr = 0.35; c.brk = 0; }
+  }
+
+  function playerInput(c: Car, dt: number) {
+    const left = isK('arrowleft', 'a', 'ArrowLeft') || touch.l, right = isK('arrowright', 'd', 'ArrowRight') || touch.r;
+    const tgt = (right ? 1 : 0) - (left ? 1 : 0);
+    c.steer += (tgt - c.steer) * Math.min(1, dt * (tgt === 0 ? 12 : 10));
+    c.thr = isK('arrowup', 'w', 'ArrowUp') || touch.g ? 1 : 0;
+    c.brk = isK('arrowdown', 's', 'ArrowDown') || touch.b ? 1 : 0;
+    c.hb = !!keys[' '];
+  }
+
+  function onPlayerFinish() {
+    player.auto = true;
+    playerRank = ranking().indexOf(player);
+    showResult();
+  }
+
+  function ranking(): Car[] {
+    return cars.slice().sort((a, b) => (a.finished && b.finished ? a.finT - b.finT : a.finished ? -1 : b.finished ? 1 : b.pidx - a.pidx));
+  }
+
+  function showResult() {
+    resultShown = true;
+    const best = Math.min(...player.laps);
+    const race = player.finT;
+    const r = rec[trackIdx];
+    let newRec = false;
+    if (best < r.lap) { r.lap = best; newRec = true; }
+    if (race < r.race) { r.race = race; newRec = true; }
+    saveRec();
+    (document.getElementById('rc-msg') as HTMLElement).textContent = ui.resultTitle[playerRank];
+    (document.getElementById('rc-sum') as HTMLElement).innerHTML = `${ui.raceTime}: <b>${fmt(race)}</b><br>${ui.bestLapL}: <b>${fmt(best)}</b>${newRec ? `<br><span class="rc-rec">${ui.record}</span>` : ''}`;
+    resultOv.hidden = false;
+  }
+
+  function update(dt: number) {
+    clock += dt;
+    if (phase === 'count' && clock >= 0) { phase = 'race'; }
+    raceT = Math.max(0, clock);
+    if (phase === 'race') {
+      for (const c of cars) {
+        if (c.isPlayer && !c.auto) playerInput(c, dt);
+        else {
+          const gap = (player.pidx - c.pidx) / track.N;
+          const rub = c.isPlayer ? 0.8 : 1 + clamp(gap * 0.5, -0.05, 0.07);
+          aiDrive(c, dt, rub);
+        }
+      }
+    } else for (const c of cars) { c.thr = 0; c.brk = 1; c.steer = 0; }
+    for (const c of cars) stepCar(c, dt);
+    // va chạm giữa các xe
+    for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) {
+      const a = cars[i], b = cars[j];
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      if (d < 30 && d > 0.01) {
+        const nx = dx / d, ny = dy / d, push = (30 - d) / 2;
+        a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push;
+        const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+        if (rv < 0) { const imp = -rv * 0.6; a.vx -= nx * imp; a.vy -= ny * imp; b.vx += nx * imp; b.vy += ny * imp; }
+      }
+    }
+    // hạt
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i]; p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96;
+    }
+    // ngược chiều
+    const ta = track.A[player.idx];
+    const sp = Math.hypot(player.vx, player.vy);
+    if (phase === 'race' && sp > 70 && Math.cos(wrapA(player.a - ta)) < -0.4) wrongT += dt; else wrongT = Math.max(0, wrongT - dt * 2);
+  }
+
+  // ---------- Vẽ ----------
+  function drawCar(c: Car) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(3, 4, 20, 11, 0, 0, 7); ctx.fill();
+    if (c.boosting > 0) { ctx.fillStyle = 'rgba(251,191,36,.85)'; ctx.beginPath(); ctx.moveTo(-17, -5); ctx.lineTo(-17 - 14 - Math.random() * 10, 0); ctx.lineTo(-17, 5); ctx.fill(); }
+    // bánh
+    ctx.fillStyle = '#16181d';
+    const ws = c.steer * 0.45;
+    for (const sy of [-1, 1]) {
+      ctx.fillRect(-14, sy * 9 - 2.5 + (sy > 0 ? 0 : -2), 9, 5);
+      ctx.save(); ctx.translate(11, sy * 9.5); ctx.rotate(ws); ctx.fillRect(-4.5, -2.5, 9, 5); ctx.restore();
+    }
+    // thân
+    ctx.fillStyle = c.color; ctx.beginPath(); ctx.roundRect(-17, -8.5, 34, 17, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(-14, -1.5, 26, 3);           // sọc dọc
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.roundRect(-17, 3, 34, 5.5, 3); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(-5, -6, 12, 12, 3); ctx.fill();  // kính
+    ctx.fillStyle = 'rgba(125,211,252,.7)'; ctx.fillRect(-3, -5, 4, 3);
+    ctx.fillStyle = c.color; ctx.fillRect(-18, -9, 3, 18);                              // cánh sau
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-18, -9, 1.2, 18);
+    ctx.fillStyle = '#fef9c3'; ctx.fillRect(15, -7, 2.5, 3); ctx.fillRect(15, 4, 2.5, 3);   // đèn trước
+    if (c.brk > 0 && Math.hypot(c.vx, c.vy) > 20) { ctx.fillStyle = '#ff2a2a'; ctx.fillRect(-18, -8, 2.5, 4); ctx.fillRect(-18, 4, 2.5, 4); }
+    if (c.isPlayer) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.roundRect(-17, -8.5, 34, 17, 5); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawMinimap() {
+    const mw = 150, mh = 100, mx = W - mw - 10, my = 10;
+    const bw = track.maxX - track.minX, bh = track.maxY - track.minY;
+    const s = Math.min((mw - 16) / bw, (mh - 16) / bh);
+    const ox = mx + mw / 2 - ((track.minX + track.maxX) / 2) * s, oy = my + mh / 2 - ((track.minY + track.maxY) / 2) * s;
+    ctx.fillStyle = 'rgba(8,12,24,.55)'; ctx.beginPath(); ctx.roundRect(mx, my, mw, mh, 8); ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i < track.N; i += 2) { const x = track.X[i] * s + ox, y = track.Y[i] * s + oy; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.closePath(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.stroke();
+    for (const c of cars) { ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(c.x * s + ox, c.y * s + oy, c.isPlayer ? 4 : 3, 0, 7); ctx.fill(); if (c.isPlayer) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); } }
+  }
+
+  function draw() {
+    ctx.fillStyle = track.theme.grass; ctx.fillRect(0, 0, W, H);
+    // camera
+    const sp = Math.hypot(player.vx, player.vy);
+    const tx = player.x + player.vx * 0.22, ty = player.y + player.vy * 0.22;
+    camX += (tx - camX) * 0.12; camY += (ty - camY) * 0.12;
+    camS += ((1.02 - 0.3 * Math.min(1, sp / 520)) - camS) * 0.05;
+    ctx.save();
+    ctx.translate(W / 2, H / 2); ctx.scale(camS, camS); ctx.translate(-camX, -camY);
+    ctx.drawImage(track.bg, track.bx, track.by);
+    // ô tăng tốc nhấp nháy
+    const pulse = 0.25 + 0.2 * Math.sin(performance.now() / 160);
+    for (const pd of track.pads) { ctx.save(); ctx.translate(pd.x, pd.y); ctx.rotate(pd.a); ctx.fillStyle = `rgba(250,204,21,${pulse})`; ctx.fillRect(-34, -30, 68, 60); ctx.restore(); }
+    for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life / p.max) * 0.8; ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1.3 - p.life / p.max * 0.5), 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    for (const c of cars.slice().sort((a, b) => (a.isPlayer ? 1 : 0) - (b.isPlayer ? 1 : 0))) drawCar(c);
+    ctx.restore();
+
+    // HUD
+    const rank = ranking();
+    const pr = rank.indexOf(player);
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(8,12,24,.55)'; ctx.beginPath(); ctx.roundRect(10, 10, 150, 112, 8); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 26px system-ui, sans-serif'; ctx.fillText(`${pr + 1}/4`, 20, 16);
+    const lapNo = clamp(Math.floor(player.pidx / track.N) + 1, 1, LAPS);
+    ctx.font = '600 13px system-ui, sans-serif'; ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(`${ui.lap} ${lapNo}/${LAPS}`, 80, 22);
+    ctx.fillText(fmt(player.finished ? player.finT : raceT), 80, 40);
+    rank.forEach((c, i) => {
+      ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(26, 66 + i * 14, 4.5, 0, 7); ctx.fill();
+      ctx.fillStyle = c.isPlayer ? '#fde68a' : '#e2e8f0'; ctx.font = `${c.isPlayer ? 700 : 500} 12px system-ui, sans-serif`;
+      ctx.fillText(`${i + 1}. ${c.name}`, 38, 60 + i * 14);
+    });
+    drawMinimap();
+    // tốc độ
+    const kmh = Math.round(sp * 0.36);
+    ctx.fillStyle = 'rgba(8,12,24,.55)'; ctx.beginPath(); ctx.roundRect(10, H - 54, 150, 44, 8); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 24px system-ui, sans-serif'; ctx.fillText(String(kmh), 20, H - 48);
+    ctx.font = '600 11px system-ui, sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.fillText(ui.kmh, 66, H - 42);
+    ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(20, H - 22, 130, 6);
+    ctx.fillStyle = player.boosting > 0 ? '#fbbf24' : '#38bdf8'; ctx.fillRect(20, H - 22, 130 * clamp(sp / 560, 0, 1), 6);
+    // thông báo
+    ctx.textAlign = 'center';
+    if (phase === 'count' || (phase === 'race' && clock < 0.8)) {
+      const n = Math.ceil(-clock + 0.2);
+      const txt = clock < -0.2 ? String(clamp(Math.ceil(-clock), 1, 3)) : ui.go;
+      void n;
+      ctx.font = '900 80px system-ui, sans-serif'; ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.strokeText(txt, W / 2, H / 2 - 70);
+      ctx.fillStyle = clock < -0.2 ? '#fff' : '#86efac'; ctx.fillText(txt, W / 2, H / 2 - 70);
+    }
+    if (wrongT > 0.8) { ctx.font = '800 28px system-ui, sans-serif'; ctx.fillStyle = '#fca5a5'; ctx.fillText(ui.wrong, W / 2, 24); }
+    ctx.textAlign = 'left';
+  }
+
+  // ---------- Vòng lặp ----------
+  let last = performance.now(), acc = 0;
+  function loop(now: number) {
+    requestAnimationFrame(loop);
+    if (phase === 'menu') { last = now; return; }
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!paused) {
+      acc += dt;
+      let n = 0;
+      while (acc >= 1 / 60 && n < 5) { update(1 / 60); acc -= 1 / 60; n++; }
+      if (n === 5) acc = 0;
+    }
+    draw();
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- Menu ----------
+  function pick(attr: string, set: (v: number) => void) {
+    document.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((x) => x.classList.toggle('sel', x === b));
+      set(Number(b.getAttribute(attr))); paintStat();
+    }));
+  }
+  let selTrack = 0, selLevel = 1;
+  pick('data-track', (v) => { selTrack = v; trackIdx = v; });
+  pick('data-level', (v) => (selLevel = v));
+  paintStat();
+  document.getElementById('rc-start')!.addEventListener('click', () => startRace(selTrack, selLevel));
+  document.getElementById('rc-again')!.addEventListener('click', () => startRace(trackIdx, level));
+  document.getElementById('rc-change')!.addEventListener('click', () => { phase = 'menu'; gameEl.hidden = true; menu.hidden = false; resultOv.hidden = true; resultShown = false; paintStat(); });
+  document.getElementById('rc-resume')!.addEventListener('click', () => setPause(false));
+  document.getElementById('rc-pausebtn')!.addEventListener('click', () => togglePause());
+
+  // ---------- Hook kiểm thử (chỉ khi URL có #debug) ----------
+  if (DEBUG) {
+    (window as any).__rc = {
+      start: (t: number, lv: number) => startRace(t, lv),
+      sim(seconds: number, playerAuto = true) {
+        paused = false; if (playerAuto) player.auto = true;
+        // giữ cho xe người chơi lái bằng máy không kết thúc ván
+        const steps = Math.round(seconds * 60);
+        for (let k = 0; k < steps && !cars.every((c) => c.finished); k++) update(1 / 60);
+        return cars.map((c) => ({ name: c.name, fin: c.finished, t: +c.finT.toFixed(1), laps: c.laps.map((x) => +x.toFixed(1)), offT: +c.offT.toFixed(1), stuck: +c.stuckT.toFixed(1), pidx: Math.round(c.pidx) }));
+      },
+      checkTracks() {
+        return DEFS.map((d, i) => {
+          const t = buildTrack(i); let maxk = 0, minSep = 1e9;
+          for (let k = 0; k < t.N; k++) { const kk = 1 / Math.max(1, t.VC[k]); maxk = Math.max(maxk, kk); }
+          const gapIdx = Math.ceil((d.w * 2.2) / t.ds);
+          for (let a = 0; a < t.N; a++) for (let b = a + gapIdx; b < t.N; b++) { if (t.N - (b - a) < gapIdx) continue; const dd = Math.hypot(t.X[a] - t.X[b], t.Y[a] - t.Y[b]); if (dd < minSep) minSep = dd; }
+          const vcMin = Math.min(...Array.from(t.VC));
+          return { i, N: t.N, L: Math.round(t.L), w: d.w, minSep: Math.round(minSep), vcMin: Math.round(vcMin), bg: `${t.bw}x${t.bh}` };
+        });
+      },
+      get state() { return { phase, clock, rank: ranking().map((c) => c.name), player: { x: player.x, y: player.y, v: Math.hypot(player.vx, player.vy), pidx: player.pidx, off: player.offroad } }; },
+    };
+  }
+</script>
+
+<style is:global>
+  #rc-menu[hidden], #rc-game[hidden], .rc-ov[hidden] { display: none; }
+  .rc-tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+  .rc-track { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; height: auto; padding: 12px 14px; }
+  .rc-track small { color: var(--muted); font-size: .8rem; font-weight: 400; line-height: 1.35; }
+  .rc-stage { position: relative; width: min(100%, 900px); margin: 12px auto 0; }
+  #rc-canvas { width: 100%; height: auto; display: block; border: 3px solid var(--line); border-radius: 16px; background: #1b2a1d; touch-action: none; }
+  .rc-ov { position: absolute; inset: 3px; border-radius: 13px; background: rgba(5, 8, 20, .78); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; text-align: center; }
+  .rc-ov h2 { margin: 0; font-size: 1.3rem; color: #fde68a; }
+  .rc-big { font-size: 1.8rem; font-weight: 800; color: #fde68a; }
+  .rc-sum { margin: 0; line-height: 1.7; }
+  .rc-rec { color: #86efac; font-weight: 700; }
+  .rc-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .rc-ov .btn.ghost { color: #fff; border-color: rgba(255,255,255,.55); background: transparent; }
+  .rc-pad { display: none; width: min(100%, 900px); margin: 10px auto 0; justify-content: space-between; align-items: flex-end; gap: 10px; user-select: none; -webkit-user-select: none; }
+  .rc-grp { display: flex; gap: 10px; }
+  .rc-pad button { min-width: 78px; height: 72px; border-radius: 18px; border: 2px solid var(--line); background: var(--card); color: var(--fg); font-size: 1.3rem; font-weight: 700; touch-action: none; -webkit-touch-callout: none; }
+  .rc-pad button.go { background: var(--accent); color: #fff; border-color: transparent; }
+  .rc-pad button.on { transform: scale(.93); filter: brightness(1.2); border-color: var(--accent); }
+  .rc-pad button.rc-small { min-width: 48px; height: 48px; font-size: 1rem; border-radius: 50%; }
+  @media (pointer: coarse), (max-width: 760px) { .rc-pad { display: flex; } }
+  @media (max-width: 640px) { .rc-ov { position: fixed; inset: 0; z-index: 60; border-radius: 0; background: rgba(5, 8, 20, .9); } }
+</style>

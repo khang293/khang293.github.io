@@ -1,0 +1,260 @@
+﻿---
+import Base from '../../layouts/Base.astro';
+import { lp, type Lang } from '../../i18n';
+import { gamesUi } from '../../data/games';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const g = gamesUi[lang];
+const T = {
+  vi: {
+    title: 'Dò Mìn', sub: 'Mở các ô an toàn, đừng chạm mìn. Số trên ô cho biết có bao nhiêu mìn xung quanh.',
+    sizes: ['Dễ 9×9', 'Vừa 16×16', 'Khó 24×14'], again: 'Ván mới', flagMode: 'Chế độ cờ', best: 'Kỷ lục',
+    keys: 'Bấm trái để mở ô. Bấm phải hoặc nhấn giữ để cắm cờ (trên điện thoại có thể bật nút Chế độ cờ). Bấm vào ô số đã đủ cờ xung quanh để mở nhanh các ô còn lại. Ô đầu tiên luôn an toàn.',
+    win: 'Bạn thắng!', lose: 'Nổ mìn rồi!', newBest: 'Kỷ lục mới!',
+  },
+  en: {
+    title: 'Minesweeper', sub: 'Open the safe squares and avoid the mines. A number tells how many mines touch that square.',
+    sizes: ['Easy 9×9', 'Medium 16×16', 'Hard 24×14'], again: 'New game', flagMode: 'Flag mode', best: 'Best',
+    keys: 'Left click to open. Right click or long press to flag (on a phone you can switch on Flag mode). Click a number that has enough flags around it to open the rest quickly. The first click is always safe.',
+    win: 'You win!', lose: 'Boom!', newBest: 'New best time!',
+  },
+}[lang];
+---
+<Base lang={lang} title={T.title} description={T.sub} noindex wide>
+  <p class="meta"><a href={lp(lang, '/game/')}>{g.back}</a></p>
+  <h1>{T.title}</h1>
+  <p class="meta">{T.sub}</p>
+
+  <div id="mn" data-ui={JSON.stringify(T)}>
+    <div class="bd-row">
+      {T.sizes.map((s, i) => <button type="button" class={`bd-opt${i === 0 ? ' sel' : ''}`} data-s={i}>{s}</button>)}
+    </div>
+    <div class="mn-bar">
+      <span class="mn-pill"><svg viewBox="0 0 24 24" width="18" height="18"><use href="#mn-flag" /></svg> <b id="mn-left">10</b></span>
+      <span class="mn-pill">⏱ <b id="mn-time">0</b></span>
+      <span class="mn-pill" id="mn-best"></span>
+      <button type="button" class="btn ghost sm" id="mn-fm" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-3px"><use href="#mn-flag" /></svg> {T.flagMode}</button>
+      <button type="button" class="btn sm" id="mn-new">{T.again}</button>
+    </div>
+    <p class="bd-status" id="mn-status" aria-live="polite"></p>
+    <div class="mn-scroll"><div class="mn-board" id="mn-board"></div></div>
+    <p class="meta">{T.keys}</p>
+
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <symbol id="mn-flag" viewBox="0 0 24 24"><path d="M6 21V3" stroke="#475569" stroke-width="2.2" stroke-linecap="round" /><path d="M6 4l12 4.5L6 13z" fill="#ef4444" /></symbol>
+        <symbol id="mn-mine" viewBox="0 0 24 24">
+          <g stroke="#1f2937" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2L19 19M19 5l-2.8 2.8M7.8 16.2L5 19" /></g>
+          <circle cx="12" cy="12" r="6.2" fill="#1f2937" /><circle cx="10" cy="10" r="1.7" fill="#fff" opacity=".8" />
+        </symbol>
+      </defs>
+    </svg>
+  </div>
+</Base>
+
+<style is:global>
+  .mn-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 4px; }
+  .mn-pill { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; font-size: .95rem; display: inline-flex; gap: 6px; align-items: center; }
+  .mn-pill:empty { display: none; }
+  #mn-fm[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .mn-scroll { overflow-x: auto; padding: 4px 0 8px; }
+  .mn-board { --cols: 9; --cs: 38px; display: grid; grid-template-columns: repeat(var(--cols), var(--cs)); gap: 3px; width: max-content; max-width: none; padding: 10px; border-radius: 16px; background: color-mix(in srgb, var(--accent) 12%, var(--card)); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.12); margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .mn-c { width: var(--cs); height: var(--cs); border-radius: 8px; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center; font: 800 calc(var(--cs) * .5)/1 system-ui, sans-serif; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 55%, #fff), color-mix(in srgb, var(--accent) 80%, #000)); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.28); transition: transform .08s, filter .15s; color: var(--fg); }
+  .mn-c:hover:not(.open) { filter: brightness(1.12); }
+  .mn-c:active:not(.open) { transform: scale(.94); }
+  .mn-c svg { width: 66%; height: 66%; }
+  .mn-c.open { cursor: default; background: color-mix(in srgb, var(--accent) 7%, var(--bg)); box-shadow: inset 0 0 0 1px var(--line); animation: mnOpen .26s ease-out backwards; animation-delay: calc(var(--d, 0) * 22ms); }
+  @keyframes mnOpen { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .mn-c.n1 { color: #3b82f6; } .mn-c.n2 { color: #16a34a; } .mn-c.n3 { color: #ef4444; } .mn-c.n4 { color: #7c3aed; }
+  .mn-c.n5 { color: #b45309; } .mn-c.n6 { color: #0891b2; } .mn-c.n7 { color: #be185d; } .mn-c.n8 { color: #64748b; }
+  .mn-c.boom { background: #ef4444; animation: mnBoom .4s ease-out; }
+  .mn-c.mine { background: color-mix(in srgb, #ef4444 25%, var(--bg)); }
+  .mn-c.wrong { background: color-mix(in srgb, #f59e0b 35%, var(--bg)); }
+  @keyframes mnBoom { 0% { transform: scale(.6); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  @media (max-width: 520px) { .mn-board { --cs: 34px; } }
+</style>
+
+<script>
+  // <logic>
+  // Rải mìn, tránh ô (sr,sc) và 8 ô quanh nó. rnd là hàm ngẫu nhiên [0,1)
+  function placeMines(rows, cols, mines, sr, sc, rnd) {
+    const cand = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (Math.abs(r - sr) <= 1 && Math.abs(c - sc) <= 1) continue;
+      cand.push(r * cols + c);
+    }
+    for (let i = cand.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    const mine = new Array(rows * cols).fill(false);
+    for (let i = 0; i < mines && i < cand.length; i++) mine[cand[i]] = true;
+    return mine;
+  }
+  function countNear(mine, rows, cols) {
+    const near = new Array(rows * cols).fill(0);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      let n = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr, cc = c + dc;
+        if ((dr || dc) && rr >= 0 && rr < rows && cc >= 0 && cc < cols && mine[rr * cols + cc]) n++;
+      }
+      near[r * cols + c] = n;
+    }
+    return near;
+  }
+  // Mở ô start, loang ra các ô 0. Trả về danh sách [chỉ số, khoảng cách] theo thứ tự mở. Bỏ qua ô đã mở hoặc đã cắm cờ.
+  function floodOpen(start, rows, cols, mine, near, opened, flagged) {
+    const out = [];
+    const dist = new Map();
+    const q = [start];
+    dist.set(start, 0);
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h];
+      if (opened[i] || flagged[i] || mine[i]) continue;
+      opened[i] = true;
+      out.push([i, dist.get(i)]);
+      if (near[i] !== 0) continue;
+      const r = Math.floor(i / cols), c = i % cols;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr, cc = c + dc;
+        if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue;
+        const j = rr * cols + cc;
+        if (!dist.has(j)) { dist.set(j, dist.get(i) + 1); q.push(j); }
+      }
+    }
+    return out;
+  }
+  // </logic>
+
+  const root = document.getElementById('mn') as HTMLElement;
+  const ui = JSON.parse(root.dataset.ui || '{}');
+  const boardEl = document.getElementById('mn-board') as HTMLElement;
+  const leftEl = document.getElementById('mn-left') as HTMLElement;
+  const timeEl = document.getElementById('mn-time') as HTMLElement;
+  const bestEl = document.getElementById('mn-best') as HTMLElement;
+  const statusEl = document.getElementById('mn-status') as HTMLElement;
+  const fmBtn = document.getElementById('mn-fm') as HTMLButtonElement;
+
+  const SIZES = [{ r: 9, c: 9, m: 10 }, { r: 16, c: 16, m: 40 }, { r: 14, c: 24, m: 62 }];
+  let si = 0, R = 9, C = 9, M = 10;
+  let mine: boolean[] = [], near: number[] = [], opened: boolean[] = [], flagged: boolean[] = [];
+  let cells: HTMLElement[] = [];
+  let started = false, over = false, flagMode = false;
+  let t0 = 0, timer = 0, flags = 0, openCount = 0;
+
+  const bestKey = () => 'mines-best' + si;
+  const getBest = () => { try { return +(localStorage.getItem(bestKey()) || 0) || 0; } catch { return 0; } };
+  const paintBest = () => { const b = getBest(); bestEl.textContent = b ? `${ui.best}: ${b}s` : ''; };
+  const stopTimer = () => { clearInterval(timer); timer = 0; };
+
+  function newGame(s?: number) {
+    if (s !== undefined) si = s;
+    ({ r: R, c: C, m: M } = SIZES[si]);
+    stopTimer(); started = false; over = false; flags = 0; openCount = 0;
+    mine = []; near = []; opened = new Array(R * C).fill(false); flagged = new Array(R * C).fill(false);
+    leftEl.textContent = String(M); timeEl.textContent = '0'; statusEl.textContent = ''; statusEl.className = 'bd-status';
+    boardEl.style.setProperty('--cols', String(C));
+    boardEl.innerHTML = ''; cells = [];
+    for (let i = 0; i < R * C; i++) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'mn-c'; b.dataset.i = String(i);
+      b.setAttribute('aria-label', `${Math.floor(i / C) + 1},${(i % C) + 1}`);
+      boardEl.appendChild(b); cells.push(b);
+    }
+    paintBest();
+  }
+
+  function paintOpen(i: number, d: number) {
+    const el = cells[i];
+    el.classList.add('open'); el.style.setProperty('--d', String(Math.min(d, 14)));
+    el.innerHTML = '';
+    if (near[i] > 0) { el.textContent = String(near[i]); el.classList.add('n' + near[i]); }
+  }
+  function openFrom(i: number) {
+    if (opened[i] || flagged[i]) return;
+    if (!started) {
+      started = true;
+      mine = placeMines(R, C, M, Math.floor(i / C), i % C, Math.random);
+      near = countNear(mine, R, C);
+      t0 = Date.now();
+      timer = window.setInterval(() => { timeEl.textContent = String(Math.floor((Date.now() - t0) / 1000)); }, 250);
+    }
+    if (mine[i]) return lose(i);
+    for (const [j, d] of floodOpen(i, R, C, mine, near, opened, flagged)) { paintOpen(j, d); openCount++; }
+    if (openCount === R * C - M) win();
+  }
+  function toggleFlag(i: number) {
+    if (opened[i] || over) return;
+    flagged[i] = !flagged[i]; flags += flagged[i] ? 1 : -1;
+    cells[i].innerHTML = flagged[i] ? '<svg viewBox="0 0 24 24"><use href="#mn-flag"/></svg>' : '';
+    leftEl.textContent = String(M - flags);
+  }
+  function chord(i: number) {
+    if (!opened[i] || near[i] === 0) return;
+    const r = Math.floor(i / C), c = i % C;
+    const ns: number[] = []; let f = 0;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const rr = r + dr, cc = c + dc;
+      if ((!dr && !dc) || rr < 0 || rr >= R || cc < 0 || cc >= C) continue;
+      const j = rr * C + cc; ns.push(j); if (flagged[j]) f++;
+    }
+    if (f !== near[i]) return;
+    for (const j of ns) { if (over) break; if (!flagged[j] && !opened[j]) openFrom(j); }
+  }
+  function lose(hit: number) {
+    over = true; stopTimer();
+    for (let i = 0; i < R * C; i++) {
+      if (mine[i] && !flagged[i]) { cells[i].classList.add('open', 'mine'); cells[i].style.setProperty('--d', '0'); cells[i].innerHTML = '<svg viewBox="0 0 24 24"><use href="#mn-mine"/></svg>'; }
+      else if (!mine[i] && flagged[i]) cells[i].classList.add('wrong');
+    }
+    cells[hit].classList.add('boom');
+    statusEl.textContent = ui.lose; statusEl.className = 'bd-status';
+  }
+  function win() {
+    over = true; stopTimer();
+    const secs = Math.max(1, Math.round((Date.now() - t0) / 1000));
+    timeEl.textContent = String(secs);
+    for (let i = 0; i < R * C; i++) if (mine[i] && !flagged[i]) { flagged[i] = true; cells[i].innerHTML = '<svg viewBox="0 0 24 24"><use href="#mn-flag"/></svg>'; }
+    leftEl.textContent = '0';
+    let msg = ui.win + ` (${secs}s)`;
+    const b = getBest();
+    if (!b || secs < b) { try { localStorage.setItem(bestKey(), String(secs)); } catch {} msg += ' ' + ui.newBest; paintBest(); }
+    statusEl.textContent = msg; statusEl.className = 'bd-status done';
+  }
+
+  // Chuột / cảm ứng
+  let pressTimer = 0, longFired = false, pressI = -1;
+  boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
+  boardEl.addEventListener('pointerdown', (e) => {
+    const t = (e.target as HTMLElement).closest('.mn-c') as HTMLElement | null;
+    if (!t) return;
+    pressI = +(t.dataset.i || -1); longFired = false;
+    if (e.pointerType === 'mouse' && e.button === 2) { longFired = true; toggleFlag(pressI); return; }
+    if (e.pointerType !== 'mouse') {
+      clearTimeout(pressTimer);
+      pressTimer = window.setTimeout(() => { longFired = true; if (navigator.vibrate) try { navigator.vibrate(20); } catch {} toggleFlag(pressI); }, 380);
+    }
+  });
+  const cancelPress = () => clearTimeout(pressTimer);
+  boardEl.addEventListener('pointerleave', cancelPress);
+  boardEl.addEventListener('pointercancel', () => { cancelPress(); pressI = -1; });
+  boardEl.addEventListener('pointerup', (e) => {
+    cancelPress();
+    const t = (e.target as HTMLElement).closest('.mn-c') as HTMLElement | null;
+    if (!t || over || longFired) return;
+    const i = +(t.dataset.i || -1);
+    if (i !== pressI || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (opened[i]) chord(i);
+    else if (flagMode) toggleFlag(i);
+    else openFrom(i);
+  });
+
+  fmBtn.addEventListener('click', () => { flagMode = !flagMode; fmBtn.setAttribute('aria-pressed', String(flagMode)); });
+  document.getElementById('mn-new')!.addEventListener('click', () => newGame());
+  root.querySelectorAll<HTMLButtonElement>('[data-s]').forEach((b) => b.addEventListener('click', () => {
+    root.querySelectorAll('[data-s]').forEach((x) => x.classList.remove('sel'));
+    b.classList.add('sel'); newGame(+(b.dataset.s || 0));
+  }));
+
+  newGame(0);
+  if (location.hash.includes('debug')) (window as any).__mn = { placeMines, countNear, floodOpen, get mine() { return mine; }, get state() { return { over, started, openCount, R, C, M }; }, openFrom, toggleFlag };
+</script>

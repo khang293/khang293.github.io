@@ -1,0 +1,629 @@
+﻿---
+import Base from '../../layouts/Base.astro';
+import { lp, type Lang } from '../../i18n';
+import { gamesUi } from '../../data/games';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const g = gamesUi[lang];
+
+// Chữ của game rắn (nằm cùng file, xóa game thì xóa file này và hai file route snake.astro)
+const T = {
+  vi: {
+    title: 'Rắn Săn Mồi',
+    sub: 'Rắn có kỹ năng: lướt nhanh, nam châm hút mồi và khiên đỡ một lần va chạm. Ăn mồi, lên cấp, né đá.',
+    mode: 'Chế độ',
+    modes: [
+      { n: 'Cổ điển', d: 'Chạm tường là thua.' },
+      { n: 'Xuyên tường', d: 'Đi qua mép sẽ ló ra phía đối diện, đá mọc nhiều hơn.' },
+      { n: 'Mê cung', d: 'Tường dựng sẵn, chạm tường là thua.' },
+    ],
+    start: 'Bắt đầu', best: 'Kỷ lục', score: 'Điểm', level: 'Cấp', len: 'Dài',
+    dash: 'Lướt', pause: 'Tạm dừng', resume: 'Tiếp tục', again: 'Chơi lại', menu: 'Menu',
+    ready: 'Vuốt hoặc bấm phím mũi tên để bắt đầu', paused: 'Tạm dừng', over: 'Thua rồi!',
+    overMsg: (s: number) => `Bạn được ${s} điểm.`, record: '🏆 Kỷ lục mới!',
+    levelUp: 'CẤP', gold: 'Sao vàng!', shield: 'Khiên!', magnet: 'Nam châm!', shieldUsed: 'Khiên vỡ!',
+    keys: 'Phím mũi tên hoặc WASD để đổi hướng, Cách (Space) để lướt nhanh, P hoặc Esc để tạm dừng. Trên điện thoại vuốt trên bàn hoặc dùng nút mũi tên. 🍎 +10 · ⭐ +50 (biến mất sau vài giây) · 🧲 hút mồi · 🛡️ đỡ một lần va chạm. Ăn liên tiếp để nhân điểm.',
+  },
+  en: {
+    title: 'Power Snake',
+    sub: 'A snake with skills: a speed dash, a food magnet and a shield that absorbs one crash. Eat, level up, dodge the rocks.',
+    mode: 'Mode',
+    modes: [
+      { n: 'Classic', d: 'Hit a wall and you lose.' },
+      { n: 'Wrap-around', d: 'Cross an edge to appear on the other side, more rocks appear.' },
+      { n: 'Maze', d: 'Pre-built walls, touching a wall ends the run.' },
+    ],
+    start: 'Start', best: 'Best', score: 'Score', level: 'Level', len: 'Length',
+    dash: 'Dash', pause: 'Pause', resume: 'Resume', again: 'Play again', menu: 'Menu',
+    ready: 'Swipe or press an arrow key to start', paused: 'Paused', over: 'Game over!',
+    overMsg: (s: number) => `You scored ${s}.`, record: '🏆 New record!',
+    levelUp: 'LEVEL', gold: 'Golden star!', shield: 'Shield!', magnet: 'Magnet!', shieldUsed: 'Shield broke!',
+    keys: 'Arrow keys or WASD to steer, Space to dash, P or Esc to pause. On a phone swipe on the board or use the arrow buttons. 🍎 +10 · ⭐ +50 (vanishes after a few seconds) · 🧲 pulls food · 🛡️ absorbs one crash. Eat quickly in a row for a score multiplier.',
+  },
+}[lang];
+const ui = {
+  ready: T.ready, paused: T.paused, over: T.over, record: T.record, levelUp: T.levelUp, gold: T.gold,
+  shield: T.shield, magnet: T.magnet, shieldUsed: T.shieldUsed, resume: T.resume, pause: T.pause,
+  overMsg: T.overMsg(0), modes: T.modes.map((m) => m.n),
+};
+---
+<Base lang={lang} title={T.title} description={T.sub} noindex>
+  <p class="meta"><a href={lp(lang, '/game/')}>{g.back}</a></p>
+  <h1>{T.title}</h1>
+  <p class="meta">{T.sub}</p>
+
+  <div id="snake" data-ui={JSON.stringify(ui)} data-desc={JSON.stringify(T.modes.map((m) => m.d))}>
+    <div id="sn-menu">
+      <h2 class="bd-h">{T.mode}</h2>
+      <div class="bd-row">
+        {T.modes.map((m, i) => <button type="button" class={`bd-opt${i === 0 ? ' sel' : ''}`} data-mode={i}>{m.n}</button>)}
+      </div>
+      <p class="meta" id="sn-mdesc">{T.modes[0].d}</p>
+      <p class="bd-stat" id="sn-stat"></p>
+      <button class="btn" type="button" id="sn-start">▶ {T.start}</button>
+      <p class="meta">{T.keys}</p>
+    </div>
+
+    <div id="sn-game" hidden>
+      <div class="sn-hud" aria-live="off">
+        <span>{T.score} <b id="sn-score">0</b></span>
+        <span>{T.best} <b id="sn-best">0</b></span>
+        <span>{T.level} <b id="sn-level">1</b></span>
+        <span>{T.len} <b id="sn-len">4</b></span>
+        <span id="sn-shield" class="sn-chip" hidden>🛡️</span>
+        <span id="sn-magnet" class="sn-chip" hidden>🧲 <b id="sn-mt">0</b></span>
+      </div>
+      <div class="sn-wrap">
+        <canvas id="sn-canvas" width="720" height="720" aria-label={T.title}></canvas>
+      </div>
+      <p class="bd-status" id="sn-status" aria-live="polite"></p>
+      <div class="sn-ctl">
+        <div class="sn-pad" aria-hidden="true">
+          <button type="button" data-d="up" class="u">▲</button>
+          <button type="button" data-d="left" class="l">◀</button>
+          <button type="button" data-d="right" class="r">▶</button>
+          <button type="button" data-d="down" class="d">▼</button>
+        </div>
+        <button type="button" class="sn-dash" id="sn-dash"><span class="sn-fill"></span><span class="sn-lbl">⚡ {T.dash}</span></button>
+      </div>
+      <div class="bd-row bd-actions">
+        <button type="button" class="btn ghost sm" id="sn-pause">⏸ {T.pause}</button>
+        <button type="button" class="btn ghost sm" id="sn-new">{T.again}</button>
+        <button type="button" class="btn ghost sm" id="sn-menu-btn">{T.menu}</button>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<style is:global>
+  #snake .sn-hud { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; align-items: center; margin: 4px 0 10px; font-size: .98rem; color: var(--muted); }
+  #snake .sn-hud b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  #snake .sn-chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .9rem; }
+  #snake .sn-wrap { display: flex; justify-content: center; }
+  #sn-canvas { width: min(100%, 640px); aspect-ratio: 1; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #10261d; touch-action: none; display: block; cursor: pointer; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
+  #snake .sn-ctl { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 10px 0 4px; flex-wrap: wrap; }
+  #snake .sn-pad { display: none; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 54px); gap: 6px; }
+  #snake .sn-pad button { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; font-size: 1.2rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #snake .sn-pad button:active { background: var(--accent); color: #fff; }
+  #snake .sn-pad .u { grid-column: 2; grid-row: 1; }
+  #snake .sn-pad .l { grid-column: 1; grid-row: 2; }
+  #snake .sn-pad .d { grid-column: 2; grid-row: 2; }
+  #snake .sn-pad .r { grid-column: 3; grid-row: 2; }
+  @media (pointer: coarse), (max-width: 700px) { #snake .sn-pad { display: grid; } }
+  #snake .sn-dash { position: relative; overflow: hidden; min-width: 120px; height: 54px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font-weight: 700; font-size: 1rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+  #snake .sn-dash .sn-fill { position: absolute; inset: 0 auto 0 0; width: 100%; background: linear-gradient(90deg, #22d3ee, #34d399); opacity: .55; transform-origin: left; transform: scaleX(var(--p, 1)); transition: transform .1s linear; }
+  #snake .sn-dash .sn-lbl { position: relative; }
+  #snake .sn-dash.cd { opacity: .75; }
+</style>
+
+<script>
+  const root = document.getElementById('snake') as HTMLElement;
+  const ui = JSON.parse(root.dataset.ui || '{}');
+  const menu = document.getElementById('sn-menu') as HTMLElement;
+  const gameEl = document.getElementById('sn-game') as HTMLElement;
+  const canvas = document.getElementById('sn-canvas') as HTMLCanvasElement;
+  const g = canvas.getContext('2d')!;
+  const statusEl = document.getElementById('sn-status') as HTMLElement;
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+
+  const N = 24, C = 30, SZ = N * C;
+  const DIRV: Record<string, { x: number; y: number }> = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+  const DASH_TIME = 1.1, DASH_CD = 7, MAGNET_TIME = 8;
+  const MODES = ['classic', 'wrap', 'maze'];
+  const ROCKS_PER_LEVEL = [1, 2, 2];
+
+  type P = { x: number; y: number };
+  type Item = { x: number; y: number; t: 'apple' | 'gold' | 'magnet' | 'shield'; ttl: number; age: number };
+  type Part = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number };
+  type Txt = { x: number; y: number; t: number; txt: string; color: string };
+
+  let mode = 0;
+  let state: 'menu' | 'ready' | 'play' | 'paused' | 'over' = 'menu';
+  let snake: P[] = [], old: P[] = [];
+  let dir: P = DIRV.right, dirQ: P[] = [];
+  let items: Item[] = [], rocks: P[] = [];
+  let grow = 0, eaten = 0, score = 0, level = 1, gt = 0, acc = 0, alpha = 1;
+  let dashT = 0, dashCd = 0, magnetT = 0, shield = false;
+  let combo = 0, lastEat = -99;
+  let shake = 0, flash = 0;
+  let parts: Part[] = [], texts: Txt[] = [];
+  let newRecord = false;
+  let best: Record<string, number> = { classic: 0, wrap: 0, maze: 0 };
+  try { const s = JSON.parse(localStorage.getItem('snake-best') || 'null'); if (s) best = { ...best, ...s }; } catch {}
+  const saveBest = () => { try { localStorage.setItem('snake-best', JSON.stringify(best)); } catch {} };
+  const paintStat = () => {
+    $('sn-stat').textContent = MODES.map((m, i) => `${ui.modes[i]}: ${best[m]}`).join('  ·  ');
+  };
+  paintStat();
+
+  const rnd = (n: number) => Math.floor(Math.random() * n);
+  const px = (v: number) => (v + 0.5) * C;
+  const tickMs = () => Math.max(62, 150 - (level - 1) * 8) * (dashT > 0 ? 0.5 : 1);
+
+  // ---------- Bản đồ ----------
+  const rockAt = (x: number, y: number) => rocks.some((r) => r.x === x && r.y === y);
+  const snakeAt = (x: number, y: number, skipTail = false) => {
+    const end = skipTail ? snake.length - 1 : snake.length;
+    for (let i = 0; i < end; i++) if (snake[i].x === x && snake[i].y === y) return true;
+    return false;
+  };
+  const itemAt = (x: number, y: number) => items.find((i) => i.x === x && i.y === y);
+  const isFree = (x: number, y: number) => x >= 0 && y >= 0 && x < N && y < N && !rockAt(x, y) && !snakeAt(x, y) && !itemAt(x, y);
+  function randomFree(minDist = 0): P | null {
+    const hx = snake[0].x, hy = snake[0].y;
+    const list: P[] = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      if (!isFree(x, y)) continue;
+      if (minDist && Math.abs(x - hx) + Math.abs(y - hy) < minDist) continue;
+      list.push({ x, y });
+    }
+    return list.length ? list[rnd(list.length)] : null;
+  }
+  function addRocks(k: number) {
+    for (let n = 0; n < k && rocks.length < (mode === 2 ? 48 : 0) + 34; n++) {
+      for (let tries = 0; tries < 60; tries++) {
+        const p = randomFree(5);
+        if (!p) break;
+        // không đặt ngay phía trước đầu rắn, và không dính vào đá khác (tránh dựng thành tường kín)
+        const hx = snake[0].x, hy = snake[0].y;
+        const ahead = (p.x === hx && Math.abs(p.y - hy) < 8 && Math.sign(p.y - hy) === dir.y) || (p.y === hy && Math.abs(p.x - hx) < 8 && Math.sign(p.x - hx) === dir.x);
+        if (ahead) continue;
+        if (rocks.some((r) => Math.abs(r.x - p.x) <= 1 && Math.abs(r.y - p.y) <= 1)) continue;
+        if (p.x === 0 || p.y === 0 || p.x === N - 1 || p.y === N - 1) if (Math.random() < 0.6) continue;
+        rocks.push(p);
+        puff(px(p.x), px(p.y), '#9ca3af', 8, 90);
+        break;
+      }
+    }
+  }
+  function mazeWalls(): P[] {
+    const w: P[] = [];
+    const bar = (x0: number, y0: number, len: number, horiz: boolean) => { for (let i = 0; i < len; i++) w.push({ x: x0 + (horiz ? i : 0), y: y0 + (horiz ? 0 : i) }); };
+    bar(4, 6, 6, true); bar(14, 6, 6, true); bar(4, 17, 6, true); bar(14, 17, 6, true);
+    bar(11, 2, 5, false); bar(12, 2, 5, false); bar(11, 17, 5, false); bar(12, 17, 5, false);
+    bar(2, 9, 2, false); bar(21, 14, 2, false);
+    return w;
+  }
+
+  // ---------- Hiệu ứng ----------
+  function puff(x: number, y: number, color: string, n: number, speed: number) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random() * 0.9);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.4, max: 0.9, color, size: 2 + Math.random() * 3.5 });
+    }
+  }
+  const floatText = (x: number, y: number, txt: string, color = '#fff') => texts.push({ x, y, t: 0, txt, color });
+
+  // ---------- Bắt đầu ván ----------
+  function newGame() {
+    snake = [{ x: 6, y: 12 }, { x: 5, y: 12 }, { x: 4, y: 12 }, { x: 3, y: 12 }];
+    old = snake.map((s) => ({ ...s }));
+    dir = DIRV.right; dirQ = [];
+    items = []; rocks = mode === 2 ? mazeWalls() : [];
+    grow = 0; eaten = 0; score = 0; level = 1; gt = 0; acc = 0; alpha = 1;
+    dashT = 0; dashCd = 0; magnetT = 0; shield = false; combo = 0; lastEat = -99;
+    shake = 0; flash = 0; parts = []; texts = []; newRecord = false;
+    spawnItem('apple');
+    state = 'ready';
+    statusEl.textContent = '';
+    ($('sn-pause') as HTMLElement).textContent = '⏸ ' + (ui.pause);
+    bgCache = makeBg();
+    updateHud(true);
+  }
+  function spawnItem(t: Item['t']) {
+    const p = randomFree(t === 'apple' ? 0 : 3);
+    if (!p) return;
+    items.push({ x: p.x, y: p.y, t, ttl: t === 'gold' ? 7 : t === 'apple' ? 0 : 10, age: 0 });
+  }
+
+  // ---------- Nhịp game ----------
+  function die() {
+    state = 'over';
+    shake = 14; flash = 0.4;
+    puff(px(snake[0].x), px(snake[0].y), '#f87171', 36, 220);
+    const m = MODES[mode];
+    if (score > best[m]) { best[m] = score; newRecord = true; saveBest(); paintStat(); }
+    statusEl.textContent = `${ui.over} ${ui.overMsg.replace(/\d+/, String(score))} ${newRecord ? ui.record : ''}`;
+    updateHud(true);
+  }
+  const blocked = (x: number, y: number) => {
+    if (mode === 1) { x = (x + N) % N; y = (y + N) % N; }
+    return x < 0 || y < 0 || x >= N || y >= N || rockAt(x, y) || snakeAt(x, y, grow === 0);
+  };
+
+  function tick() {
+    if (dirQ.length) dir = dirQ.shift()!;
+    const h = snake[0];
+    let nx = h.x + dir.x, ny = h.y + dir.y;
+    if (mode === 1) { nx = (nx + N) % N; ny = (ny + N) % N; }
+    let hit = '';
+    if (nx < 0 || ny < 0 || nx >= N || ny >= N) hit = 'wall';
+    else if (rockAt(nx, ny)) hit = 'rock';
+    else if (snakeAt(nx, ny, grow === 0)) hit = 'self';
+    if (hit) {
+      if (!shield) { die(); return; }
+      shield = false;
+      shake = 9; flash = 0.25;
+      floatText(px(h.x), px(h.y) - 18, ui.shieldUsed, '#67e8f9');
+      puff(px(h.x), px(h.y), '#67e8f9', 22, 170);
+      if (hit === 'rock') {
+        rocks = rocks.filter((r) => !(r.x === nx && r.y === ny));
+        puff(px(nx), px(ny), '#9ca3af', 16, 150);
+      } else {
+        // rẽ sang hướng còn trống, hết đường thì thua
+        const turns = [{ x: -dir.y, y: dir.x }, { x: dir.y, y: -dir.x }].sort(() => Math.random() - 0.5);
+        const ok = turns.find((t) => !blocked(h.x + t.x, h.y + t.y));
+        if (!ok) { die(); return; }
+        dir = ok; dirQ = [];
+        nx = h.x + dir.x; ny = h.y + dir.y;
+        if (mode === 1) { nx = (nx + N) % N; ny = (ny + N) % N; }
+      }
+    }
+
+    // nam châm: kéo mồi lại gần đầu rắn
+    if (magnetT > 0) {
+      for (const it of items) {
+        if (it.t !== 'apple' && it.t !== 'gold') continue;
+        const dx = h.x - it.x, dy = h.y - it.y;
+        if (Math.abs(dx) + Math.abs(dy) > 7) continue;
+        const stepX = Math.abs(dx) >= Math.abs(dy);
+        const tx = it.x + (stepX ? Math.sign(dx) : 0), ty = it.y + (stepX ? 0 : Math.sign(dy));
+        if (tx >= 0 && ty >= 0 && tx < N && ty < N && !rockAt(tx, ty) && !snakeAt(tx, ty) && !itemAt(tx, ty)) { it.x = tx; it.y = ty; }
+      }
+    }
+
+    old = snake.map((s) => ({ ...s }));
+    snake.unshift({ x: nx, y: ny });
+    if (grow > 0) grow--; else snake.pop();
+    alpha = 0;
+
+    const it = itemAt(nx, ny);
+    if (it) eat(it);
+    if (dashT > 0) puff(px(snake[snake.length - 1].x), px(snake[snake.length - 1].y), '#67e8f9', 2, 40);
+  }
+
+  function eat(it: Item) {
+    items = items.filter((i) => i !== it);
+    const cx = px(it.x), cy = px(it.y);
+    if (it.t === 'apple' || it.t === 'gold') {
+      combo = gt - lastEat < 3.2 ? Math.min(combo + 1, 5) : 1;
+      lastEat = gt;
+      const base = it.t === 'gold' ? 50 : 10;
+      const pts = Math.round(base * (1 + 0.25 * (combo - 1)));
+      score += pts;
+      grow += it.t === 'gold' ? 2 : 1;
+      eaten++;
+      puff(cx, cy, it.t === 'gold' ? '#fde047' : '#f87171', it.t === 'gold' ? 26 : 14, 170);
+      floatText(cx, cy - 10, `+${pts}${combo > 1 ? ' x' + combo : ''}`, it.t === 'gold' ? '#fde047' : '#fff');
+      if (it.t === 'gold') { floatText(cx, cy - 34, ui.gold, '#fde047'); shake = 4; }
+      if (it.t === 'apple') spawnItem('apple');
+      if (!items.some((i) => i.t === 'apple')) spawnItem('apple');
+      // mồi đặc biệt xuất hiện thỉnh thoảng
+      if (!items.some((i) => i.t === 'gold') && Math.random() < 0.22) spawnItem('gold');
+      if (!items.some((i) => i.t === 'magnet' || i.t === 'shield') && Math.random() < 0.14) spawnItem(Math.random() < 0.5 ? 'magnet' : 'shield');
+      const nl = 1 + Math.floor(eaten / 5);
+      if (nl > level) {
+        level = nl;
+        addRocks(ROCKS_PER_LEVEL[mode]);
+        floatText(SZ / 2, SZ / 2 - 30, `${ui.levelUp} ${level}`, '#a7f3d0');
+        flash = 0.2;
+      }
+    } else if (it.t === 'magnet') {
+      magnetT = MAGNET_TIME;
+      puff(cx, cy, '#c084fc', 22, 170);
+      floatText(cx, cy - 10, ui.magnet, '#c084fc');
+    } else {
+      shield = true;
+      puff(cx, cy, '#67e8f9', 22, 170);
+      floatText(cx, cy - 10, ui.shield, '#67e8f9');
+    }
+  }
+
+  function update(dt: number) {
+    for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; p.life -= dt; }
+    parts = parts.filter((p) => p.life > 0);
+    for (const t of texts) t.t += dt;
+    texts = texts.filter((t) => t.t < 1.2);
+    shake = Math.max(0, shake - dt * 30);
+    flash = Math.max(0, flash - dt);
+    if (state === 'over' || state === 'play') alpha = state === 'over' ? 1 : alpha;
+    if (state !== 'play') return;
+    gt += dt;
+    dashT = Math.max(0, dashT - dt);
+    dashCd = Math.max(0, dashCd - dt);
+    magnetT = Math.max(0, magnetT - dt);
+    for (const it of items) { it.age += dt; if (it.ttl) it.ttl -= dt; }
+    items = items.filter((it) => it.t === 'apple' || it.ttl > 0);
+    acc += dt * 1000;
+    let guard = 0;
+    while (state === 'play' && acc >= tickMs() && guard++ < 6) { acc -= tickMs(); tick(); }
+    alpha = state === 'play' ? Math.min(1, acc / tickMs()) : 1;
+  }
+
+  // ---------- Vẽ ----------
+  let bgCache: HTMLCanvasElement | null = null;
+  function makeBg() {
+    const c = document.createElement('canvas'); c.width = c.height = SZ;
+    const k = c.getContext('2d')!;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      k.fillStyle = (x + y) % 2 ? '#183629' : '#1c3d2e';
+      k.fillRect(x * C, y * C, C, C);
+    }
+    const vg = k.createRadialGradient(SZ / 2, SZ / 2, SZ * 0.35, SZ / 2, SZ / 2, SZ * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
+    k.fillStyle = vg; k.fillRect(0, 0, SZ, SZ);
+    if (mode === 1) {
+      k.strokeStyle = 'rgba(103,232,249,.85)'; k.lineWidth = 4; k.setLineDash([10, 8]); k.shadowColor = '#22d3ee'; k.shadowBlur = 10;
+      k.strokeRect(3, 3, SZ - 6, SZ - 6);
+    } else {
+      k.strokeStyle = '#b45309'; k.lineWidth = 8; k.shadowColor = '#f97316'; k.shadowBlur = 8;
+      k.strokeRect(4, 4, SZ - 8, SZ - 8);
+    }
+    return c;
+  }
+  const rr = (x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); };
+
+  function drawRock(r: P) {
+    const x = r.x * C, y = r.y * C;
+    const maze = mode === 2;
+    g.fillStyle = 'rgba(0,0,0,.3)'; rr(x + 3, y + 5, C - 4, C - 4, 7); g.fill();
+    const gr = g.createLinearGradient(x, y, x, y + C);
+    gr.addColorStop(0, maze ? '#a16207' : '#9ca3af'); gr.addColorStop(1, maze ? '#78350f' : '#4b5563');
+    g.fillStyle = gr; rr(x + 2, y + 2, C - 4, C - 4, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)'; rr(x + 5, y + 4, C - 14, 5, 3); g.fill();
+  }
+  function drawItem(it: Item) {
+    const cx = px(it.x), cy = px(it.y) + Math.sin(it.age * 4) * 1.5;
+    const blink = it.ttl > 0 && it.ttl < 2 && Math.floor(it.age * 8) % 2 === 0;
+    if (blink) return;
+    if (it.t === 'apple') {
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(cx, cy + 11, 9, 3.5, 0, 0, 7); g.fill();
+      const gr = g.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 13);
+      gr.addColorStop(0, '#fca5a5'); gr.addColorStop(0.5, '#ef4444'); gr.addColorStop(1, '#991b1b');
+      g.fillStyle = gr; g.beginPath(); g.arc(cx, cy + 1, 11, 0, 7); g.fill();
+      g.fillStyle = '#4ade80'; g.beginPath(); g.ellipse(cx + 4, cy - 10, 6, 3, -0.5, 0, 7); g.fill();
+      g.strokeStyle = '#78350f'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy - 8); g.lineTo(cx + 1, cy - 13); g.stroke();
+    } else if (it.t === 'gold') {
+      const pulse = 1 + Math.sin(it.age * 6) * 0.1;
+      g.save(); g.translate(cx, cy); g.rotate(it.age * 1.2); g.scale(pulse, pulse);
+      g.shadowColor = '#facc15'; g.shadowBlur = 16; g.fillStyle = '#fde047';
+      g.beginPath();
+      for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5 - Math.PI / 2, r = i % 2 ? 6 : 14; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      g.closePath(); g.fill();
+      g.restore();
+      g.strokeStyle = 'rgba(253,224,71,.8)'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 18, -Math.PI / 2, -Math.PI / 2 + (it.ttl / 7) * Math.PI * 2); g.stroke();
+    } else {
+      const col = it.t === 'magnet' ? '#c084fc' : '#67e8f9';
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(cx, cy, 14, 0, 7); g.fill();
+      g.strokeStyle = col; g.lineWidth = 3; g.shadowColor = col; g.shadowBlur = 12; g.beginPath(); g.arc(cx, cy, 14, 0, 7); g.stroke(); g.shadowBlur = 0;
+      g.font = '18px system-ui, "Segoe UI Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(it.t === 'magnet' ? '🧲' : '🛡️', cx, cy + 1);
+    }
+  }
+
+  function bodyPts() {
+    return snake.map((s, i) => {
+      const o = old[Math.min(i, old.length - 1)] || s;
+      const dx = s.x - o.x, dy = s.y - o.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return { x: px(s.x), y: px(s.y), jump: true };
+      return { x: px(o.x + dx * alpha), y: px(o.y + dy * alpha), jump: false };
+    });
+  }
+  function drawSnake() {
+    const pts = bodyPts();
+    const len = pts.length;
+    const rad = (i: number) => C * (0.5 - 0.23 * (i / Math.max(1, len - 1)));
+    const col = (i: number) => {
+      const t = i / Math.max(1, len - 1);
+      return `hsl(${95 + 80 * t},${72 - 8 * t}%,${54 - 15 * t - (i % 2 ? 3 : 0)}%)`;
+    };
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    // bóng
+    g.strokeStyle = 'rgba(0,0,0,.25)';
+    for (let i = len - 1; i >= 1; i--) {
+      if (pts[i].jump || pts[i - 1].jump) continue;
+      g.lineWidth = rad(i) * 2; g.beginPath(); g.moveTo(pts[i].x + 2, pts[i].y + 4); g.lineTo(pts[i - 1].x + 2, pts[i - 1].y + 4); g.stroke();
+    }
+    for (let i = len - 1; i >= 1; i--) {
+      if (Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) > C * 1.5) continue;
+      g.strokeStyle = col(i); g.lineWidth = rad(i) * 2;
+      g.beginPath(); g.moveTo(pts[i].x, pts[i].y); g.lineTo(pts[i - 1].x, pts[i - 1].y); g.stroke();
+      // vệt sáng trên lưng
+      g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = rad(i) * 0.8;
+      g.beginPath(); g.moveTo(pts[i].x - 2, pts[i].y - 3); g.lineTo(pts[i - 1].x - 2, pts[i - 1].y - 3); g.stroke();
+    }
+    // đầu
+    const h = pts[0], hr = C * 0.54;
+    if (dashT > 0) { g.shadowColor = '#22d3ee'; g.shadowBlur = 22; }
+    const gr = g.createRadialGradient(h.x - 4, h.y - 5, 2, h.x, h.y, hr);
+    gr.addColorStop(0, '#d9f99d'); gr.addColorStop(1, '#65a30d');
+    g.fillStyle = gr; g.beginPath(); g.arc(h.x, h.y, hr, 0, 7); g.fill();
+    g.shadowBlur = 0;
+    const d = dir, perp = { x: -d.y, y: d.x };
+    for (const s of [-1, 1]) {
+      const ex = h.x + d.x * 5 + perp.x * s * 7, ey = h.y + d.y * 5 + perp.y * s * 7;
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex, ey, 5, 0, 7); g.fill();
+      g.fillStyle = '#0f172a'; g.beginPath(); g.arc(ex + d.x * 1.8, ey + d.y * 1.8, 2.6, 0, 7); g.fill();
+    }
+    if (state === 'play' && Math.floor(gt * 3) % 2 === 0) {
+      g.strokeStyle = '#ef4444'; g.lineWidth = 2;
+      const tx = h.x + d.x * (hr + 1), ty = h.y + d.y * (hr + 1);
+      g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + d.x * 7, ty + d.y * 7); g.stroke();
+    }
+    if (shield) {
+      g.strokeStyle = `rgba(103,232,249,${0.6 + Math.sin(gt * 8) * 0.3})`; g.lineWidth = 3; g.shadowColor = '#22d3ee'; g.shadowBlur = 12;
+      g.beginPath(); g.arc(h.x, h.y, hr + 7, 0, 7); g.stroke(); g.shadowBlur = 0;
+    }
+    if (magnetT > 0) {
+      const r = (gt * 90) % (C * 6);
+      g.strokeStyle = `rgba(192,132,252,${0.35 * (1 - r / (C * 6))})`; g.lineWidth = 3;
+      g.beginPath(); g.arc(h.x, h.y, r + 10, 0, 7); g.stroke();
+    }
+  }
+
+  function banner(text: string, sub = '') {
+    g.fillStyle = 'rgba(8,20,15,.6)'; g.fillRect(0, 0, SZ, SZ);
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '700 34px system-ui, sans-serif'; g.fillText(text, SZ / 2, SZ / 2 - (sub ? 14 : 0), SZ - 60);
+    if (sub) { g.font = '20px system-ui, sans-serif'; g.fillStyle = '#d1fae5'; g.fillText(sub, SZ / 2, SZ / 2 + 28, SZ - 60); }
+  }
+
+  function draw() {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, SZ, SZ);
+    g.save();
+    if (shake) g.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    if (bgCache) g.drawImage(bgCache, 0, 0);
+    for (const r of rocks) drawRock(r);
+    for (const it of items) drawItem(it);
+    if (snake.length) drawSnake();
+    for (const p of parts) { g.globalAlpha = Math.max(0, p.life / p.max); g.fillStyle = p.color; g.beginPath(); g.arc(p.x, p.y, p.size, 0, 7); g.fill(); }
+    g.globalAlpha = 1;
+    g.font = '700 20px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4;
+    for (const t of texts) {
+      g.globalAlpha = Math.max(0, 1 - t.t / 1.2);
+      g.strokeStyle = 'rgba(0,0,0,.6)'; g.strokeText(t.txt, t.x, t.y - t.t * 30);
+      g.fillStyle = t.color; g.fillText(t.txt, t.x, t.y - t.t * 30);
+    }
+    g.globalAlpha = 1;
+    g.restore();
+    if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash * 0.6})`; g.fillRect(0, 0, SZ, SZ); }
+    if (state === 'ready') banner(ui.ready);
+    else if (state === 'paused') banner(ui.paused);
+    else if (state === 'over') banner(ui.over, `${statusEl.textContent!.replace(ui.over, '').trim()}`);
+  }
+
+  // ---------- HUD ----------
+  let hudAt = 0;
+  function updateHud(force = false) {
+    const now = performance.now();
+    if (!force && now - hudAt < 90) return;
+    hudAt = now;
+    $('sn-score').textContent = String(score);
+    $('sn-best').textContent = String(Math.max(best[MODES[mode]], score));
+    $('sn-level').textContent = String(level);
+    $('sn-len').textContent = String(snake.length);
+    ($('sn-shield') as HTMLElement).hidden = !shield;
+    ($('sn-magnet') as HTMLElement).hidden = magnetT <= 0;
+    $('sn-mt').textContent = Math.ceil(magnetT) + 's';
+    const btn = $('sn-dash');
+    const p = dashT > 0 ? 1 : 1 - dashCd / DASH_CD;
+    btn.style.setProperty('--p', String(Math.max(0.02, p)));
+    btn.classList.toggle('cd', dashCd > 0 && dashT <= 0);
+  }
+
+  // ---------- Điều khiển ----------
+  function setDir(name: string) {
+    if (state !== 'ready' && state !== 'play') return;
+    const d = DIRV[name];
+    const ref = dirQ.length ? dirQ[dirQ.length - 1] : dir;
+    if (d.x === -ref.x && d.y === -ref.y) return;
+    if (state === 'ready') { state = 'play'; acc = 0; }
+    if (d.x === ref.x && d.y === ref.y) return;
+    if (dirQ.length < 2) dirQ.push(d);
+  }
+  function doDash() {
+    if (state !== 'play' || dashCd > 0) return;
+    dashT = DASH_TIME; dashCd = DASH_CD;
+    const h = snake[0];
+    puff(px(h.x), px(h.y), '#67e8f9', 16, 160);
+    flash = 0.08;
+  }
+  function togglePause() {
+    if (state === 'play') { state = 'paused'; ($('sn-pause') as HTMLElement).textContent = '▶ ' + ui.resume; }
+    else if (state === 'paused') { state = 'play'; ($('sn-pause') as HTMLElement).textContent = '⏸ ' + ui.pause; }
+  }
+
+  const KEYS: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' };
+  document.addEventListener('keydown', (e) => {
+    if (gameEl.hidden) return;
+    const k = e.key;
+    if (KEYS[k]) { e.preventDefault(); setDir(KEYS[k]); return; }
+    if (k === ' ' || k === 'Shift') { e.preventDefault(); doDash(); return; }
+    if (k === 'p' || k === 'P' || k === 'Escape') togglePause();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
+
+  // vuốt trên bàn chơi
+  let sx = 0, sy = 0, sid = -1;
+  canvas.addEventListener('pointerdown', (e) => {
+    sx = e.clientX; sy = e.clientY; sid = e.pointerId;
+    try { canvas.setPointerCapture(e.pointerId); } catch {}
+    if (state === 'paused') togglePause();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== sid) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
+    setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+    sx = e.clientX; sy = e.clientY;
+  });
+  const endSwipe = (e: PointerEvent) => { if (e.pointerId === sid) sid = -1; };
+  canvas.addEventListener('pointerup', endSwipe);
+  canvas.addEventListener('pointercancel', endSwipe);
+
+  document.querySelectorAll<HTMLElement>('.sn-pad button').forEach((b) => {
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); setDir(b.dataset.d!); });
+  });
+  $('sn-dash').addEventListener('pointerdown', (e) => { e.preventDefault(); doDash(); });
+  $('sn-pause').addEventListener('click', togglePause);
+
+  // ---------- Menu ----------
+  const descEls = Array.from(document.querySelectorAll<HTMLElement>('[data-mode]'));
+  const descs = (document.getElementById('sn-mdesc') as HTMLElement);
+  const DESC: string[] = JSON.parse(root.getAttribute('data-desc') || '[]');
+  descEls.forEach((b) => b.addEventListener('click', () => {
+    descEls.forEach((x) => x.classList.remove('sel'));
+    b.classList.add('sel');
+    mode = Number(b.dataset.mode);
+    if (DESC[mode]) descs.textContent = DESC[mode];
+  }));
+  function showGame() { menu.hidden = true; gameEl.hidden = false; newGame(); }
+  $('sn-start').addEventListener('click', showGame);
+  $('sn-new').addEventListener('click', newGame);
+  $('sn-menu-btn').addEventListener('click', () => { state = 'menu'; gameEl.hidden = true; menu.hidden = false; paintStat(); });
+
+  // ---------- Vòng lặp ----------
+  let last = performance.now();
+  function frame(t: number) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    if (gameEl.hidden) return;
+    update(dt);
+    draw();
+    updateHud();
+  }
+  requestAnimationFrame(frame);
+
+  if (location.hash.includes('debug')) {
+    (window as any).__sn = {
+      get state() { return state; }, get snake() { return snake; }, get items() { return items; }, get rocks() { return rocks; },
+      get score() { return score; }, get level() { return level; }, get shield() { return shield; }, get magnet() { return magnetT; },
+      start(m = 0) { mode = m; showGame(); }, setDir, doDash, tick, togglePause,
+      give(t: Item['t']) { const h = snake[0]; const p = { x: h.x + dir.x, y: h.y + dir.y }; items.push({ x: p.x, y: p.y, t, ttl: 10, age: 0 }); },
+      setEaten(n: number) { eaten = n; },
+      key(k: string) { document.dispatchEvent(new KeyboardEvent('keydown', { key: k })); },
+    };
+  }
+</script>
