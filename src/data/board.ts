@@ -24,7 +24,9 @@ export const boardUi = {
     caro: {
       ...common.vi,
       title: 'Cờ Caro',
-      sub: 'Bàn 15×15, ai xếp được 5 quân liền nhau theo hàng ngang, dọc hoặc chéo trước thì thắng.',
+      levels: ['Dễ', 'Thường', 'Khó', 'Siêu khó'],
+      size: 'Cỡ bàn', sizes: ['15×15 (chuẩn)', '19×19 (rộng)', '25×25 (rất rộng)'],
+      sub: 'Bàn 15×15, 19×19 hoặc 25×25. Ai xếp được 5 quân liền nhau theo hàng ngang, dọc hoặc chéo trước thì thắng. Bàn càng rộng càng nhiều nước đi.',
       side: 'Bạn đánh',
       sides: ['X (đi trước)', 'O (đi sau)'],
       keys: 'Bấm vào ô trống để đặt quân. Máy sẽ chặn các đường 3, 4 quân của bạn nên hãy tạo hai đường cùng lúc để thắng.',
@@ -51,7 +53,9 @@ export const boardUi = {
     caro: {
       ...common.en,
       title: 'Caro (Gomoku)',
-      sub: '15×15 board. The first to line up 5 stones in a row, horizontally, vertically or diagonally, wins.',
+      levels: ['Easy', 'Normal', 'Hard', 'Insane'],
+      size: 'Board size', sizes: ['15×15 (standard)', '19×19 (wide)', '25×25 (huge)'],
+      sub: '15×15, 19×19 or 25×25 board. The first to line up 5 stones in a row, horizontally, vertically or diagonally, wins. A bigger board means more room to play.',
       side: 'You play',
       sides: ['X (moves first)', 'O (moves second)'],
       keys: 'Click an empty cell to place a stone. The computer blocks your threes and fours, so build two threats at once to win.',

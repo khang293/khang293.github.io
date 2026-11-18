@@ -6,6 +6,10 @@ export const gamesUi = {
     play: 'Chơi',
     back: '← Trò chơi',
     cards: {
+      link: { icon: '🔗', title: 'Nối Cặp Cổ Điển', desc: 'Nối hai hình giống nhau bằng đường gấp khúc tối đa 3 đoạn, xóa hết bàn trước khi hết giờ.' },
+      blocks: { icon: '🧱', title: 'Xếp Khối', desc: 'Xoay và xếp các khối rơi thành hàng kín để ghi điểm. Càng lâu càng nhanh, có khối giữ và bóng đáp.' },
+      marbles: { icon: '🔮', title: 'Bắn Bi', desc: 'Bắn bi cùng màu để nổ chuỗi bi đang chạy trên đường xoắn trước khi chúng vào hố.' },
+      runner: { icon: '🏃', title: 'Chạy Vô Tận', desc: 'Nhảy, trượt, né chướng ngại và nhặt xu. Chạy càng xa, tốc độ càng cao.' },
       match3: { icon: '🍬', title: 'Nối Thú', desc: 'Hoán đổi để nối 3 con thú trở lên, nổ dây chuyền, đạt mục tiêu điểm trong số nước đi. Nhiều màn.' },
       fxbug: { icon: '🐞', title: 'Tìm lỗi Power Fx', desc: 'Đọc công thức Power Fx, chọn dòng bị lỗi. Vừa vui vừa luyện mắt nghề.' },
       tower: { icon: '🏰', title: 'Thủ Thành', desc: 'Đặt tháp chặn quái trên đường đi, nâng cấp tháp, hạ boss ở cuối mỗi đợt.' },
@@ -118,6 +122,10 @@ export const gamesUi = {
     play: 'Play',
     back: '← Games',
     cards: {
+      link: { icon: '🔗', title: 'Classic Pair Link', desc: 'Connect two matching tiles with a path of at most 3 segments and clear the board before time runs out.' },
+      blocks: { icon: '🧱', title: 'Block Stack', desc: 'Rotate and stack falling blocks into full rows to score. It speeds up over time, with hold and ghost piece.' },
+      marbles: { icon: '🔮', title: 'Marble Blast', desc: 'Shoot matching marbles to pop the chain rolling along a spiral path before it reaches the hole.' },
+      runner: { icon: '🏃', title: 'Endless Runner', desc: 'Jump, slide, dodge obstacles and collect coins. The farther you run, the faster it gets.' },
       match3: { icon: '🍬', title: 'Critter Match', desc: 'Swap to match 3 or more critters, chain explosions, reach the score goal within your moves. Many levels.' },
       fxbug: { icon: '🐞', title: 'Power Fx Bug Hunt', desc: 'Read a Power Fx formula and pick the buggy line. Fun and a workout for your pro eye.' },
       tower: { icon: '🏰', title: 'Tower Defense', desc: 'Place towers along the path, upgrade them and take down the boss at the end of each wave.' },
