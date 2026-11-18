@@ -75,7 +75,9 @@ const ui = {
         <span id="sn-magnet" class="sn-chip" hidden>🧲 <b id="sn-mt">0</b></span>
       </div>
       <div class="sn-wrap">
-        <canvas id="sn-canvas" width="720" height="720" aria-label={T.title}></canvas>
+        <div class="sn-box" id="sn-box">
+          <canvas id="sn-canvas" width="720" height="720" aria-label={T.title}></canvas>
+        </div>
       </div>
       <p class="bd-status" id="sn-status" aria-live="polite"></p>
       <div class="sn-ctl">
@@ -101,7 +103,8 @@ const ui = {
   #snake .sn-hud b { color: var(--fg); font-variant-numeric: tabular-nums; }
   #snake .sn-chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .9rem; }
   #snake .sn-wrap { display: flex; justify-content: center; }
-  #sn-canvas { width: min(100%, 640px); aspect-ratio: 1; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #10261d; touch-action: none; display: block; cursor: pointer; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
+  #snake .sn-box { position: relative; width: min(100%, 640px); }
+  #sn-canvas { width: 100%; aspect-ratio: 1; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #10261d; touch-action: none; display: block; cursor: pointer; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
   #snake .sn-ctl { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 10px 0 4px; flex-wrap: wrap; }
   #snake .sn-pad { display: none; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 54px); gap: 6px; }
   #snake .sn-pad button { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; font-size: 1.2rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -118,7 +121,9 @@ const ui = {
 </style>
 
 <script>
+  import { sfx, mountMute } from '../../data/sfx';
   const root = document.getElementById('snake') as HTMLElement;
+  mountMute(document.getElementById('sn-box'));
   const ui = JSON.parse(root.dataset.ui || '{}');
   const menu = document.getElementById('sn-menu') as HTMLElement;
   const gameEl = document.getElementById('sn-game') as HTMLElement;
@@ -149,6 +154,8 @@ const ui = {
   let shake = 0, flash = 0;
   let parts: Part[] = [], texts: Txt[] = [];
   let newRecord = false;
+  let deathT = 0, deathShown = 0;
+  const syncMusic = () => sfx.music(state === 'play' ? (level >= 4 ? 'action' : 'calm') : null);
   let best: Record<string, number> = { classic: 0, wrap: 0, maze: 0 };
   try { const s = JSON.parse(localStorage.getItem('snake-best') || 'null'); if (s) best = { ...best, ...s }; } catch {}
   const saveBest = () => { try { localStorage.setItem('snake-best', JSON.stringify(best)); } catch {} };
@@ -223,9 +230,10 @@ const ui = {
     items = []; rocks = mode === 2 ? mazeWalls() : [];
     grow = 0; eaten = 0; score = 0; level = 1; gt = 0; acc = 0; alpha = 1;
     dashT = 0; dashCd = 0; magnetT = 0; shield = false; combo = 0; lastEat = -99;
-    shake = 0; flash = 0; parts = []; texts = []; newRecord = false;
+    shake = 0; flash = 0; parts = []; texts = []; newRecord = false; deathT = 0; deathShown = 0;
     spawnItem('apple');
     state = 'ready';
+    syncMusic();
     statusEl.textContent = '';
     ($('sn-pause') as HTMLElement).textContent = '⏸ ' + (ui.pause);
     bgCache = makeBg();
@@ -240,7 +248,10 @@ const ui = {
   // ---------- Nhịp game ----------
   function die() {
     state = 'over';
-    shake = 14; flash = 0.4;
+    shake = 14; flash = 0.4; deathT = 0; deathShown = 0;
+    syncMusic();
+    sfx.play('explode');
+    setTimeout(() => { if (state === 'over') sfx.play('lose'); }, 650);
     puff(px(snake[0].x), px(snake[0].y), '#f87171', 36, 220);
     const m = MODES[mode];
     if (score > best[m]) { best[m] = score; newRecord = true; saveBest(); paintStat(); }
@@ -253,7 +264,7 @@ const ui = {
   };
 
   function tick() {
-    if (dirQ.length) dir = dirQ.shift()!;
+    if (dirQ.length) { dir = dirQ.shift()!; sfx.tone(dashT > 0 ? 900 : 640, 0.03, 'triangle', 0.05); }
     const h = snake[0];
     let nx = h.x + dir.x, ny = h.y + dir.y;
     if (mode === 1) { nx = (nx + N) % N; ny = (ny + N) % N; }
@@ -265,6 +276,7 @@ const ui = {
       if (!shield) { die(); return; }
       shield = false;
       shake = 9; flash = 0.25;
+      sfx.play('boom'); sfx.play('hurt');
       floatText(px(h.x), px(h.y) - 18, ui.shieldUsed, '#67e8f9');
       puff(px(h.x), px(h.y), '#67e8f9', 22, 170);
       if (hit === 'rock') {
@@ -316,7 +328,8 @@ const ui = {
       eaten++;
       puff(cx, cy, it.t === 'gold' ? '#fde047' : '#f87171', it.t === 'gold' ? 26 : 14, 170);
       floatText(cx, cy - 10, `+${pts}${combo > 1 ? ' x' + combo : ''}`, it.t === 'gold' ? '#fde047' : '#fff');
-      if (it.t === 'gold') { floatText(cx, cy - 34, ui.gold, '#fde047'); shake = 4; }
+      if (it.t === 'gold') { floatText(cx, cy - 34, ui.gold, '#fde047'); shake = 4; sfx.play('coin'); }
+      else { sfx.tone(420 + combo * 70, 0.07, 'square', 0.13, 640 + combo * 90); }
       if (it.t === 'apple') spawnItem('apple');
       if (!items.some((i) => i.t === 'apple')) spawnItem('apple');
       // mồi đặc biệt xuất hiện thỉnh thoảng
@@ -328,13 +341,17 @@ const ui = {
         addRocks(ROCKS_PER_LEVEL[mode]);
         floatText(SZ / 2, SZ / 2 - 30, `${ui.levelUp} ${level}`, '#a7f3d0');
         flash = 0.2;
+        sfx.play('levelup');
+        if (level === 4) syncMusic();
       }
     } else if (it.t === 'magnet') {
       magnetT = MAGNET_TIME;
       puff(cx, cy, '#c084fc', 22, 170);
       floatText(cx, cy - 10, ui.magnet, '#c084fc');
+      sfx.play('power');
     } else {
       shield = true;
+      sfx.play('power');
       puff(cx, cy, '#67e8f9', 22, 170);
       floatText(cx, cy - 10, ui.shield, '#67e8f9');
     }
@@ -348,6 +365,22 @@ const ui = {
     shake = Math.max(0, shake - dt * 30);
     flash = Math.max(0, flash - dt);
     if (state === 'over' || state === 'play') alpha = state === 'over' ? 1 : alpha;
+    // rắn nổ dần từ đầu đến đuôi khi thua
+    if (state === 'over') {
+      deathT += dt;
+      const k = Math.min(snake.length, Math.floor(deathT * 26));
+      while (deathShown < k) {
+        const s = snake[deathShown];
+        puff(px(s.x), px(s.y), deathShown % 2 ? '#f87171' : '#fbbf24', 7, 120);
+        if (deathShown % 3 === 0) sfx.tone(300 - deathShown * 6, 0.05, 'square', 0.07);
+        deathShown++;
+      }
+    }
+    // vệt gió khi đang lướt
+    if (state === 'play' && dashT > 0 && snake.length) {
+      const b = bodyPts()[0];
+      parts.push({ x: b.x - dir.x * 10 + (Math.random() - 0.5) * 14, y: b.y - dir.y * 10 + (Math.random() - 0.5) * 14, vx: -dir.x * 60, vy: -dir.y * 60, life: 0.35, max: 0.35, color: Math.random() < 0.5 ? '#67e8f9' : '#a7f3d0', size: 2 + Math.random() * 2.5 });
+    }
     if (state !== 'play') return;
     gt += dt;
     dashT = Math.max(0, dashT - dt);
@@ -366,9 +399,39 @@ const ui = {
   function makeBg() {
     const c = document.createElement('canvas'); c.width = c.height = SZ;
     const k = c.getContext('2d')!;
+    // mỗi chế độ một nền riêng: cổ điển = đồng cỏ, xuyên tường = đêm sao, mê cung = nền đá hầm
+    const pal = mode === 0 ? ['#183629', '#1c3d2e'] : mode === 1 ? ['#0f2236', '#122a42'] : ['#3a2f2a', '#43362f'];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      k.fillStyle = (x + y) % 2 ? '#183629' : '#1c3d2e';
+      k.fillStyle = (x + y) % 2 ? pal[0] : pal[1];
       k.fillRect(x * C, y * C, C, C);
+    }
+    const rnd2 = (n: number) => Math.random() * n;
+    if (mode === 0) {
+      // ngọn cỏ và hoa nhỏ
+      for (let i = 0; i < 260; i++) {
+        const x = rnd2(SZ), y = rnd2(SZ);
+        k.strokeStyle = `rgba(${90 + rnd2(50)},${170 + rnd2(60)},${100 + rnd2(40)},.28)`; k.lineWidth = 1.2;
+        k.beginPath(); k.moveTo(x, y); k.lineTo(x + rnd2(4) - 2, y - 3 - rnd2(4)); k.stroke();
+      }
+      for (let i = 0; i < 26; i++) {
+        k.fillStyle = ['rgba(253,224,71,.5)', 'rgba(251,207,232,.45)', 'rgba(255,255,255,.4)'][i % 3];
+        k.beginPath(); k.arc(rnd2(SZ), rnd2(SZ), 1.6 + rnd2(1.4), 0, 7); k.fill();
+      }
+    } else if (mode === 1) {
+      k.strokeStyle = 'rgba(103,232,249,.07)'; k.lineWidth = 1;
+      for (let i = 1; i < N; i++) { k.beginPath(); k.moveTo(i * C, 0); k.lineTo(i * C, SZ); k.moveTo(0, i * C); k.lineTo(SZ, i * C); k.stroke(); }
+      for (let i = 0; i < 90; i++) {
+        k.fillStyle = `rgba(207,250,254,${0.15 + rnd2(0.55)})`;
+        k.beginPath(); k.arc(rnd2(SZ), rnd2(SZ), 0.6 + rnd2(1.4), 0, 7); k.fill();
+      }
+    } else {
+      // vết nứt trên nền đá
+      for (let i = 0; i < 34; i++) {
+        let x = rnd2(SZ), y = rnd2(SZ);
+        k.strokeStyle = 'rgba(0,0,0,.22)'; k.lineWidth = 1.2; k.beginPath(); k.moveTo(x, y);
+        for (let j = 0; j < 4; j++) { x += rnd2(14) - 7; y += rnd2(12); k.lineTo(x, y); }
+        k.stroke();
+      }
     }
     const vg = k.createRadialGradient(SZ / 2, SZ / 2, SZ * 0.35, SZ / 2, SZ / 2, SZ * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
@@ -376,6 +439,11 @@ const ui = {
     if (mode === 1) {
       k.strokeStyle = 'rgba(103,232,249,.85)'; k.lineWidth = 4; k.setLineDash([10, 8]); k.shadowColor = '#22d3ee'; k.shadowBlur = 10;
       k.strokeRect(3, 3, SZ - 6, SZ - 6);
+    } else if (mode === 2) {
+      k.strokeStyle = '#78350f'; k.lineWidth = 9; k.shadowColor = '#fb923c'; k.shadowBlur = 10;
+      k.strokeRect(4.5, 4.5, SZ - 9, SZ - 9);
+      k.shadowBlur = 0; k.strokeStyle = 'rgba(0,0,0,.35)'; k.lineWidth = 1;
+      for (let i = 0; i < SZ; i += 24) { k.beginPath(); k.moveTo(i, 1); k.lineTo(i, 8); k.moveTo(i, SZ - 8); k.lineTo(i, SZ - 1); k.moveTo(1, i); k.lineTo(8, i); k.moveTo(SZ - 8, i); k.lineTo(SZ - 1, i); k.stroke(); }
     } else {
       k.strokeStyle = '#b45309'; k.lineWidth = 8; k.shadowColor = '#f97316'; k.shadowBlur = 8;
       k.strokeRect(4, 4, SZ - 8, SZ - 8);
@@ -387,16 +455,36 @@ const ui = {
   function drawRock(r: P) {
     const x = r.x * C, y = r.y * C;
     const maze = mode === 2;
-    g.fillStyle = 'rgba(0,0,0,.3)'; rr(x + 3, y + 5, C - 4, C - 4, 7); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.35)'; rr(x + 3, y + 6, C - 4, C - 4, maze ? 3 : 9); g.fill();
     const gr = g.createLinearGradient(x, y, x, y + C);
-    gr.addColorStop(0, maze ? '#a16207' : '#9ca3af'); gr.addColorStop(1, maze ? '#78350f' : '#4b5563');
-    g.fillStyle = gr; rr(x + 2, y + 2, C - 4, C - 4, 7); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.22)'; rr(x + 5, y + 4, C - 14, 5, 3); g.fill();
+    gr.addColorStop(0, maze ? '#b4783a' : '#a8afb9'); gr.addColorStop(1, maze ? '#6b3a17' : '#4b5563');
+    g.fillStyle = gr; rr(x + 2, y + 2, C - 4, C - 4, maze ? 3 : 9); g.fill();
+    if (maze) {
+      // đường vữa của gạch
+      g.strokeStyle = 'rgba(40,18,6,.55)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(x + 2, y + C / 2); g.lineTo(x + C - 2, y + C / 2);
+      const off = (r.x + r.y) % 2 ? 9 : 19;
+      g.moveTo(x + off, y + 2); g.lineTo(x + off, y + C / 2); g.moveTo(x + C - off, y + C / 2); g.lineTo(x + C - off, y + C - 2); g.stroke();
+      g.fillStyle = 'rgba(255,220,170,.28)'; g.fillRect(x + 3, y + 3, C - 7, 2);
+    } else {
+      g.fillStyle = 'rgba(255,255,255,.28)'; rr(x + 6, y + 5, C - 16, 5, 3); g.fill();
+      g.strokeStyle = 'rgba(30,41,59,.45)'; g.lineWidth = 1.3;
+      g.beginPath(); g.moveTo(x + 11, y + 14); g.lineTo(x + 15, y + 19); g.lineTo(x + 13, y + 25); g.stroke();
+      g.fillStyle = 'rgba(74,222,128,.55)'; g.beginPath(); g.ellipse(x + C - 8, y + C - 8, 5, 3, -0.4, 0, 7); g.fill();
+    }
   }
   function drawItem(it: Item) {
     const cx = px(it.x), cy = px(it.y) + Math.sin(it.age * 4) * 1.5;
     const blink = it.ttl > 0 && it.ttl < 2 && Math.floor(it.age * 8) % 2 === 0;
     if (blink) return;
+    // vầng sáng nhịp thở quanh mồi
+    {
+      const col = it.t === 'apple' ? '248,113,113' : it.t === 'gold' ? '253,224,71' : it.t === 'magnet' ? '192,132,252' : '103,232,249';
+      const pr = 17 + Math.sin(it.age * 3.5) * 3;
+      const halo = g.createRadialGradient(cx, cy, 2, cx, cy, pr + 8);
+      halo.addColorStop(0, `rgba(${col},.4)`); halo.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = halo; g.beginPath(); g.arc(cx, cy, pr + 8, 0, 7); g.fill();
+    }
     if (it.t === 'apple') {
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(cx, cy + 11, 9, 3.5, 0, 0, 7); g.fill();
       const gr = g.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 13);
@@ -431,7 +519,10 @@ const ui = {
     });
   }
   function drawSnake() {
-    const pts = bodyPts();
+    let pts = bodyPts();
+    const gone = state === 'over' ? deathShown : 0; // các đốt đã nổ
+    if (gone >= pts.length) return;
+    pts = pts.slice(gone);
     const len = pts.length;
     const rad = (i: number) => C * (0.5 - 0.23 * (i / Math.max(1, len - 1)));
     const col = (i: number) => {
@@ -453,8 +544,21 @@ const ui = {
       g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = rad(i) * 0.8;
       g.beginPath(); g.moveTo(pts[i].x - 2, pts[i].y - 3); g.lineTo(pts[i - 1].x - 2, pts[i - 1].y - 3); g.stroke();
     }
+    // vảy: hình thoi nhỏ sáng/tối xen kẽ, kèm sọc bụng nhạt ở giữa thân
+    for (let i = len - 1; i >= 1; i--) {
+      const a = pts[i], b = pts[i - 1];
+      if (a.jump || Math.hypot(a.x - b.x, a.y - b.y) > C * 1.5) continue;
+      const r = rad(i), ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      g.save(); g.translate(mx, my); g.rotate(ang);
+      g.fillStyle = i % 2 ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.14)';
+      g.beginPath(); g.moveTo(-r * 0.55, 0); g.lineTo(0, -r * 0.62); g.lineTo(r * 0.55, 0); g.lineTo(0, r * 0.62); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(254,249,195,.16)'; g.fillRect(-r * 0.3, -r * 0.13, r * 0.6, r * 0.26);
+      g.restore();
+    }
     // đầu
     const h = pts[0], hr = C * 0.54;
+    if (gone > 0) return;
     if (dashT > 0) { g.shadowColor = '#22d3ee'; g.shadowBlur = 22; }
     const gr = g.createRadialGradient(h.x - 4, h.y - 5, 2, h.x, h.y, hr);
     gr.addColorStop(0, '#d9f99d'); gr.addColorStop(1, '#65a30d');
@@ -511,7 +615,7 @@ const ui = {
     if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash * 0.6})`; g.fillRect(0, 0, SZ, SZ); }
     if (state === 'ready') banner(ui.ready);
     else if (state === 'paused') banner(ui.paused);
-    else if (state === 'over') banner(ui.over, `${statusEl.textContent!.replace(ui.over, '').trim()}`);
+    else if (state === 'over' && deathT > 0.9) banner(ui.over, `${statusEl.textContent!.replace(ui.over, '').trim()}`);
   }
 
   // ---------- HUD ----------
@@ -539,7 +643,7 @@ const ui = {
     const d = DIRV[name];
     const ref = dirQ.length ? dirQ[dirQ.length - 1] : dir;
     if (d.x === -ref.x && d.y === -ref.y) return;
-    if (state === 'ready') { state = 'play'; acc = 0; }
+    if (state === 'ready') { state = 'play'; acc = 0; sfx.play('go'); syncMusic(); }
     if (d.x === ref.x && d.y === ref.y) return;
     if (dirQ.length < 2) dirQ.push(d);
   }
@@ -549,10 +653,12 @@ const ui = {
     const h = snake[0];
     puff(px(h.x), px(h.y), '#67e8f9', 16, 160);
     flash = 0.08;
+    sfx.play('dash');
   }
   function togglePause() {
-    if (state === 'play') { state = 'paused'; ($('sn-pause') as HTMLElement).textContent = '▶ ' + ui.resume; }
-    else if (state === 'paused') { state = 'play'; ($('sn-pause') as HTMLElement).textContent = '⏸ ' + ui.pause; }
+    if (state === 'play') { state = 'paused'; ($('sn-pause') as HTMLElement).textContent = '▶ ' + ui.resume; sfx.play('click'); }
+    else if (state === 'paused') { state = 'play'; ($('sn-pause') as HTMLElement).textContent = '⏸ ' + ui.pause; sfx.play('click'); }
+    syncMusic();
   }
 
   const KEYS: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' };
@@ -602,7 +708,7 @@ const ui = {
   function showGame() { menu.hidden = true; gameEl.hidden = false; newGame(); }
   $('sn-start').addEventListener('click', showGame);
   $('sn-new').addEventListener('click', newGame);
-  $('sn-menu-btn').addEventListener('click', () => { state = 'menu'; gameEl.hidden = true; menu.hidden = false; paintStat(); });
+  $('sn-menu-btn').addEventListener('click', () => { state = 'menu'; gameEl.hidden = true; menu.hidden = false; paintStat(); syncMusic(); });
 
   // ---------- Vòng lặp ----------
   let last = performance.now();

@@ -29,7 +29,8 @@ export const SITE = {
   //   provider 'cloudflare'  : id là mã token của Cloudflare Web Analytics
   //   provider 'goatcounter' : id là tên site (phần trước .goatcounter.com)
   //   provider 'plausible'   : id là tên miền, ví dụ 'khang293.github.io'
-  analytics: { provider: '', id: '' },
+  //   provider 'google'      : Google Analytics 4, id là mã đo lường G-XXXXXXXXXX (có dùng cookie)
+  analytics: { provider: 'google', id: 'G-FZFXLBZMNS' },
 
   // Form liên hệ: tạo form miễn phí tại https://formspree.io rồi dán ID (phần sau /f/)
   formspree: 'xljjjjen',

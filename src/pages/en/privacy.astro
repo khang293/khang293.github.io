@@ -15,7 +15,11 @@ import { SITE } from '../../config';
     <h2>Information stored on your device</h2>
     <p>The site stores one small setting in your browser (your light or dark theme choice) so it can remember it next time. It is not sent anywhere.</p>
     {SITE.analytics.id ? (
-      <p>To learn how many people visit and which pages they read, the site uses the analytics tool <strong>{SITE.analytics.provider === 'cloudflare' ? 'Cloudflare Web Analytics' : SITE.analytics.provider === 'goatcounter' ? 'GoatCounter' : 'Plausible'}</strong>. According to the provider, it does not use tracking cookies and only records aggregated figures, without building a personal profile of you. I use these figures to improve the content of the site.</p>
+      SITE.analytics.provider === 'google' ? (
+        <p>To learn how many people visit, which pages they read and whether they play the small games, the site uses <strong>Google Analytics 4</strong> from Google. It uses cookies to tell visits apart and records anonymous figures such as pages viewed, country, device type and traffic source. I have turned off Google's advertising and audience features, I do not use these figures for advertising and I do not sell them. You can block cookies in your browser or use a tracking blocker if you prefer not to be counted. I use the figures to improve the content of the site.</p>
+      ) : (
+        <p>To learn how many people visit and which pages they read, the site uses the analytics tool <strong>{SITE.analytics.provider === 'cloudflare' ? 'Cloudflare Web Analytics' : SITE.analytics.provider === 'goatcounter' ? 'GoatCounter' : 'Plausible'}</strong>. According to the provider, it does not use tracking cookies and only records aggregated figures, without building a personal profile of you. I use these figures to improve the content of the site.</p>
+      )
     ) : (
       <p>The site currently <strong>does not use tracking cookies</strong> or analytics tools.</p>
     )}

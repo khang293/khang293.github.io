@@ -73,6 +73,33 @@ const contactLinks = [
     {an.id && an.provider === 'goatcounter' && (
       <script is:inline async src="//gc.zgo.at/count.js" data-goatcounter={`https://${an.id}.goatcounter.com/count`}></script>
     )}
+    {an.id && an.provider === 'google' && (
+      <>
+        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${an.id}`}></script>
+        <script is:inline define:vars={{ gaId: an.id }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag() { dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', gaId, { allow_google_signals: false, allow_ad_personalization_signals: false });
+          // Đo game: lần chạm đầu tiên vào trang game, và các nút bắt đầu / chơi lại
+          (function () {
+            var m = location.pathname.match(/\/game\/([^/]+)\/?$/);
+            if (!m) return;
+            var name = m[1], first = false;
+            document.addEventListener('pointerdown', function (e) {
+              var t = e.target;
+              if (!t || !t.closest || t.closest('a, header, footer')) return;
+              if (!first) { first = true; gtag('event', 'game_interact', { game_name: name }); }
+              var b = t.closest('button');
+              if (b && /start|again|retry|new|play/i.test(b.id || '')) gtag('event', 'game_start', { game_name: name });
+            }, true);
+            document.addEventListener('keydown', function () {
+              if (!first) { first = true; gtag('event', 'game_interact', { game_name: name }); }
+            }, true);
+          })();
+        </script>
+      </>
+    )}
     {an.id && an.provider === 'plausible' && (
       <script is:inline defer src="https://plausible.io/js/script.js" data-domain={an.id}></script>
     )}
