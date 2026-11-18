@@ -57,7 +57,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
         <span id="bm-ult-st">⚡</span>
         <span>⏱ <b id="bm-time">0</b> {b.s}</span>
       </div>
-      <canvas id="bm-canvas" width="720" height="624" aria-label={b.title}></canvas>
+      <div class="bm-stage"><canvas id="bm-canvas" width="720" height="624" aria-label={b.title}></canvas></div>
       <div class="bm-pad" aria-hidden="false">
         <div class="joy" id="bm-joy" role="application" aria-label="Joystick"></div>
         <div class="bm-btns">
@@ -81,6 +81,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
 <script>
   import { paintHero, type Look, type G } from '../../data/heroArt';
   import { createJoystick } from '../../data/joystick';
+  import { sfx, mountMute } from '../../data/sfx';
 
   const root = document.getElementById('bomb') as HTMLElement;
   const ui = JSON.parse(root.dataset.ui || '{}');
@@ -159,6 +160,17 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   let meteors: { x: number; y: number; t: number; max: number }[] = [];
   let beams: { sx: number; sy: number; ex: number; ey: number; t: number }[] = [];
   let banner: { text: string; t: number } | null = null;
+  // Hiệu ứng nhìn: vòng sóng nổ, đợt chớp màn hình, hạt trôi nền, nhân vật đã phát tiếng chết
+  let blasts: { x: number; y: number; t: number; big: boolean }[] = [];
+  let flash = { t: 0, c: '255,255,255' };
+  let ambient: { x: number; y: number; vx: number; vy: number; life: number; max: number; s: number }[] = [];
+  const deadSeen = new Set<Actor>();
+  const sndAt: Record<string, number> = {};
+  function snd(name: string, gap = 60) {
+    const n = performance.now();
+    if (n - (sndAt[name] || 0) < gap) return;
+    sndAt[name] = n; sfx.play(name);
+  }
 
   // Đặt cơ chế riêng của bản đồ, tránh vùng xuất phát. Ô được đặt luôn là ô trống đi được.
   function placeHazards(spawns: [number, number][]) {
@@ -232,6 +244,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     bombs = [];
     particles = [];
     shake = 0;
+    blasts = []; ambient = []; flash.t = 0; deadSeen.clear();
     bgDirty = true;
     canvas.style.borderColor = THEMES[mapKey].border;
     canvas.style.backgroundColor = THEMES[mapKey].border;
@@ -244,11 +257,13 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     gameEl.hidden = false;
     running = true;
     last = performance.now();
+    sfx.play('go'); sfx.music('action');
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
   }
 
   function stop() {
+    sfx.music(null);
     running = false;
     cancelAnimationFrame(raf);
   }
@@ -278,6 +293,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     if (bombAt(x, y)) return false;
     if (bombs.filter((b) => b.owner === a).length >= a.maxBombs) return false;
     bombs.push({ gx: x, gy: y, t: a.fuse, range: a.range, owner: a });
+    if (a.human) sfx.play('bomb'); else snd('fuse', 120);
     return true;
   }
 
@@ -298,6 +314,8 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       if (other) other.t = 0; // nổ dây chuyền
     };
     burn(gx, gy);
+    blasts.push({ x: gx * C + C / 2, y: gy * C + C / 2, t: 0, big: range >= 2 });
+    snd('explode', 90);
     for (const d of Object.values(DIRS)) {
       for (let i = 1; i <= range; i++) {
         const x = gx + d.x * i, y = gy + d.y * i;
@@ -306,6 +324,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
         if (grid[y][x] === 2) {
           grid[y][x] = 0;
           bgDirty = true;
+          snd('hit', 50);
           spark(x * C + C / 2, y * C + C / 2, 8, ['#b45309', '#f59e0b', '#7c2d12'], 150, 420);
           if (Math.random() < 0.35) fresh.push([key(x, y), (['B', 'R', 'S'] as Item[])[Math.floor(Math.random() * 3)]]);
           break;
@@ -466,8 +485,10 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       const last = cells[cells.length - 1];
       beams.push({ sx: pc[0], sy: pc[1], ex: last[0], ey: last[1], t: 0.45 });
       shake = Math.max(shake, 0.12);
+      sfx.play('laser'); flash = { t: 0.18, c: '134,239,172' };
     } else if (hero === 0) { // Khiên thần
       player.shield = 4;
+      sfx.play('power'); flash = { t: 0.2, c: '250,204,21' };
     } else if (hero === 1) { // Mưa thiên thạch: nhắm quanh các bot, tránh xa người chơi
       const used = new Set<number>();
       const add = (x: number, y: number, t: number) => {
@@ -483,8 +504,10 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
         add(bx, by, 1.0); add(b.tx, b.ty, 1.1); add(bx + d.x, by + d.y, 0.9);
       }
       for (let n = 0; n < 40 && meteors.length < 9; n++) add(1 + Math.floor(Math.random() * (W - 2)), 1 + Math.floor(Math.random() * (H - 2)), 0.8 + Math.random() * 0.5);
+      sfx.play('wave');
     } else { // Ẩn thân
       player.stealth = 5;
+      sfx.play('swoosh'); spark(pc[0] * C + C / 2, pc[1] * C + C / 2, 14, ['#94a3b8', '#e2e8f0', '#475569'], 120, 0);
     }
     ultUsed = true;
     banner = { text: ui.heroes[hero].ult.name, t: 1.6 };
@@ -503,6 +526,12 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     if (it === 'B') a.maxBombs = Math.min(a.maxBombs + 1, 5);
     if (it === 'R') a.range = Math.min(a.range + 1, 6);
     if (it === 'S') a.speed = Math.min(a.speed + 0.4, a.human ? 5 : 4);
+    if (a.human) {
+      sfx.play('power');
+      const col = it === 'B' ? ['#93c5fd', '#ffffff'] : it === 'R' ? ['#fdba74', '#fde047'] : ['#86efac', '#ffffff'];
+      spark(a.gx * C + C / 2, a.gy * C + C / 2, 12, col, 130, 0);
+      blasts.push({ x: a.gx * C + C / 2, y: a.gy * C + C / 2, t: 0.1, big: false });
+    }
   }
 
   // Cổng dịch chuyển: bước vào một cổng thì xuất hiện ở cổng còn lại
@@ -516,6 +545,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     spark(a.gx * C + C / 2, a.gy * C + C / 2, 8, cols, 120, 0);
     a.gx = a.tx = nx; a.gy = a.ty = ny; a.p = 0;
     spark(nx * C + C / 2, ny * C + C / 2, 8, cols, 120, 0);
+    if (a.human) sfx.play('swoosh');
     a.tp = 1.2;
   }
 
@@ -576,6 +606,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
         if (other) other.t = 0;
       }
       shake = Math.max(shake, 0.15);
+      snd('boom', 150);
     }
     for (const b of bombs) b.t -= dt;
     let due: Bomb | undefined;
@@ -587,9 +618,29 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       if (fire.has(key(x, y)) && a.shield <= 0) a.alive = false;
     }
     for (const a of actors) if (!a.alive && a.die > 0) a.die -= dt;
+    // Âm thanh và hiệu ứng khi ai đó bị hạ
+    for (const a of actors) {
+      if (a.alive || deadSeen.has(a)) continue;
+      deadSeen.add(a);
+      const x = a.gx * C + C / 2 + (a.tx - a.gx) * a.p * C, y = a.gy * C + C / 2 + (a.ty - a.gy) * a.p * C;
+      spark(x, y, a.human ? 26 : 18, a.human ? ['#fca5a5', '#ffffff', '#fde047'] : ['#fde047', '#ffffff', '#86efac'], 200, 260);
+      if (a.human) { sfx.play('hurt'); flash = { t: 0.35, c: '239,68,68' }; shake = Math.max(shake, 0.35); }
+      else { sfx.play('coin'); sfx.play('pop'); }
+    }
     shake = Math.max(0, shake - dt);
+    flash.t = Math.max(0, flash.t - dt);
     for (const p of particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; }
     particles = particles.filter((p) => p.life > 0);
+    if (particles.length > 400) particles.splice(0, particles.length - 400);
+    for (const b of blasts) b.t += dt;
+    blasts = blasts.filter((b) => b.t < 0.4);
+    // Hạt trôi nền theo bản đồ: đom đóm/phấn hoa, bụi cát, tàn lửa
+    if (ambient.length < 26 && Math.random() < 0.35) {
+      const lava = mapKey === 'lava', desert = mapKey === 'desert';
+      ambient.push({ x: Math.random() * W * C, y: lava ? H * C + 4 : Math.random() * H * C, vx: desert ? 30 + Math.random() * 30 : (Math.random() - 0.5) * 16, vy: lava ? -(20 + Math.random() * 40) : desert ? (Math.random() - 0.5) * 8 : -(4 + Math.random() * 10), life: 3 + Math.random() * 3, max: 6, s: 1 + Math.random() * 2 });
+    }
+    for (const p of ambient) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+    ambient = ambient.filter((p) => p.life > 0 && p.y > -10 && p.x < W * C + 10);
     if (!over) {
       const botsAlive = actors.filter((a) => !a.human && a.alive).length;
       if (!player.alive || botsAlive === 0) {
@@ -632,6 +683,8 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
 
   function finish() {
     running = false;
+    sfx.music(null);
+    sfx.play(outcome === 'win' ? 'win' : outcome === 'draw' ? 'wrong' : 'lose');
     resultEl.hidden = false;
     const msg = document.getElementById('bm-msg')!;
     const sub = document.getElementById('bm-sub')!;
@@ -832,6 +885,16 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     ctx.beginPath(); ctx.arc(cx + r * 0.95, cy - r * 1.05, sp * 0.5, 0, Math.PI * 2); ctx.fill();
   }
 
+  // Viền tối nhẹ phủ lên sân, tạo chiều sâu
+  const vig = document.createElement('canvas');
+  vig.width = W * C; vig.height = H * C;
+  {
+    const v = vig.getContext('2d')!;
+    const k = v.createRadialGradient(vig.width / 2, vig.height / 2, vig.height * 0.4, vig.width / 2, vig.height / 2, vig.width * 0.62);
+    k.addColorStop(0, 'rgba(0,0,0,0)'); k.addColorStop(1, 'rgba(0,0,0,.38)');
+    v.fillStyle = k; v.fillRect(0, 0, vig.width, vig.height);
+  }
+
   function draw() {
     if (bgDirty) renderBg();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -891,6 +954,12 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       gr.addColorStop(0.7, `rgba(249,115,22,${a * 0.9})`);
       gr.addColorStop(1, 'rgba(220,38,38,0)');
       ctx.fillStyle = gr; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+      // quầng sáng cộng màu quanh ngọn lửa
+      ctx.globalCompositeOperation = 'lighter';
+      const hg = ctx.createRadialGradient(x, y, 4, x, y, C * 1.1);
+      hg.addColorStop(0, `rgba(251,146,60,${a * 0.28})`); hg.addColorStop(1, 'rgba(251,146,60,0)');
+      ctx.fillStyle = hg; ctx.fillRect(x - C * 1.1, y - C * 1.1, C * 2.2, C * 2.2);
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     // Thiên thạch: vùng báo nguy hiểm và quả cầu lửa đang rơi
@@ -924,13 +993,40 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
       .sort((p, q) => p.gy + (p.ty - p.gy) * p.p - (q.gy + (q.ty - q.gy) * q.p))
       .forEach(drawActor);
 
+    // Vòng sóng nổ
+    for (const b of blasts) {
+      const k = b.t / 0.4, r = C * (0.3 + k * (b.big ? 1.9 : 1.3));
+      ctx.globalAlpha = Math.max(0, 1 - k) * 0.8;
+      ctx.strokeStyle = b.big ? '#fde68a' : '#ffffff'; ctx.lineWidth = 5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // Hạt: lớp phát sáng rồi lớp rõ nét
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max) * 0.45;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.max);
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
+    // Hạt trôi nền
+    const ac = mapKey === 'lava' ? '253,186,116' : mapKey === 'desert' ? '255,240,200' : '253,248,170';
+    for (const p of ambient) {
+      const f = Math.min(1, p.life / 1.2, (p.max - p.life) / 0.8 + 0.2);
+      ctx.globalAlpha = Math.max(0, f) * (mapKey === 'desert' ? 0.28 : 0.6);
+      ctx.fillStyle = `rgb(${ac})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.globalAlpha = 1;
     ctx.restore();
+    // Ánh sáng viền tối và đợt chớp màn hình
+    ctx.drawImage(vig, 0, 0);
+    if (flash.t > 0) { ctx.fillStyle = `rgba(${flash.c},${Math.min(0.5, flash.t * 1.4)})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 
     if (banner) {
       ctx.save();
@@ -1005,7 +1101,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
     g.scale(1.5, 1.5);
     paintChar(g, i, 32, 44, { fx: 0, fy: 1, moving: false, s: 1, human: false });
     btn.addEventListener('click', () => {
-      hero = i;
+      hero = i; sfx.play('select');
       try { localStorage.setItem('bomb-hero', String(i)); } catch {}
       markHero();
     });
@@ -1023,7 +1119,7 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   }
   mapBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-      mapKey = btn.dataset.map || 'grass';
+      mapKey = btn.dataset.map || 'grass'; sfx.play('select');
       try { localStorage.setItem('bomb-map', mapKey); } catch {}
       markMap();
     });
@@ -1036,7 +1132,9 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   });
   document.getElementById('bm-again')!.addEventListener('click', () => start(level));
   renderStats();
+  mountMute(document.querySelector('.bm-stage') as HTMLElement);
   document.getElementById('bm-change')!.addEventListener('click', () => {
+    sfx.play('click');
     stop();
     renderStats();
     gameEl.hidden = true;
@@ -1072,6 +1170,16 @@ const mapKeys = ['grass', 'desert', 'lava'] as const;
   #bm-menu[hidden], #bm-game[hidden], #bm-result[hidden] { display: none; }
   .bm-hud { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .9rem; color: var(--muted); margin: 18px 0 8px; }
   .bm-hud b { color: var(--fg); }
+  .bm-stage { position: relative; }
+  @keyframes bm-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+  .bm-result { animation: bm-rise .35s ease-out; }
+  .bm-big { text-shadow: 0 0 20px currentColor; }
+  .bm-hero, .bm-map, .bm-level { transition: transform .15s, border-color .15s, box-shadow .15s; }
+  .bm-hero:hover, .bm-map:hover, .bm-level:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.12); }
+  .bm-drop { box-shadow: 0 6px 18px rgba(0,0,0,.28), inset 0 -4px 0 rgba(0,0,0,.18); }
+  .bm-drop:active { transform: scale(.94); }
+  .bm-ult:not(:disabled) { animation: bm-pulse 1.8s ease-in-out infinite; }
+  @keyframes bm-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 50% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } }
   #bm-canvas { width: 100%; height: auto; display: block; border-radius: 16px; border: 3px solid #1e293b; background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,.3); touch-action: none; }
   .bm-hud span { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; }
   .bm-pad { display: none; justify-content: space-between; align-items: center; margin-top: 14px; user-select: none; -webkit-user-select: none; }

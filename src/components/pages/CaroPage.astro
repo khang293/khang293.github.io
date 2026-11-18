@@ -1,4 +1,4 @@
----
+﻿---
 import Base from '../../layouts/Base.astro';
 import { lp, type Lang } from '../../i18n';
 import { gamesUi } from '../../data/games';
@@ -52,6 +52,8 @@ const ui = {
 </Base>
 
 <script>
+  import { sfx, mountMute } from '../../data/sfx';
+
   const root = document.getElementById('caro') as HTMLElement;
   const ui = JSON.parse(root.dataset.ui || '{}');
   const menu = document.getElementById('cr-menu') as HTMLElement;
@@ -161,7 +163,8 @@ const ui = {
   const PAD = 44, SZ = PAD * 2 + CELL * (N - 1);
   canvas.width = SZ; canvas.height = SZ;
   const px = (i: number) => PAD + (i % N) * CELL, py = (i: number) => PAD + Math.floor(i / N) * CELL;
-  let hover = -1, animStart = 0;
+  let hover = -1, animStart = 0, winStart = 0, raf = 0;
+  mountMute(gameEl);
 
   // Mặt bàn gỗ vẽ một lần rồi tái sử dụng
   const bg = document.createElement('canvas');
@@ -232,26 +235,47 @@ const ui = {
     const lastIdx = moves.length ? moves[moves.length - 1] : -1;
     for (let i = 0; i < N * N; i++) {
       if (!b[i]) continue;
-      let s = 1;
+      // bóng đổ mềm dưới mỗi quân
+      let e = 1, dy = 0, s = 1, al = 1;
       if (i === lastIdx) {
-        const t = Math.min(1, (now - animStart) / 200);
-        if (t < 1) { animating = true; const c1 = 1.70158, u = t - 1; s = 1 + (c1 + 1) * u * u * u + c1 * u * u; }
+        const t = Math.min(1, (now - animStart) / 300);
+        if (t < 1) { animating = true; e = 1 - Math.pow(1 - t, 3); dy = -(1 - e) * 40; s = 1 + (1 - e) * 0.3; al = Math.min(1, t * 4); }
+        // gợn sóng khi quân chạm bàn
+        const rt = (now - animStart - 260) / 420;
+        if (rt > 0 && rt < 1) { animating = true; g.save(); g.strokeStyle = `rgba(120,80,30,${0.45 * (1 - rt)})`; g.lineWidth = 3 * (1 - rt) + 0.5; g.beginPath(); g.arc(px(i), py(i), 12 + rt * 26, 0, Math.PI * 2); g.stroke(); g.restore(); }
       }
-      mark(b[i], px(i), py(i), s);
+      g.save(); g.fillStyle = `rgba(40,20,0,${0.2 * e * al})`; g.beginPath();
+      g.ellipse(px(i) + 2, py(i) + 7, 17 * (0.55 + 0.45 * e), 7 * (0.55 + 0.45 * e), 0, 0, Math.PI * 2); g.fill(); g.restore();
+      mark(b[i], px(i), py(i) + dy, s, al);
     }
     if (winLine.length) {
       const pts = winLine.map((i) => [px(i), py(i)]).sort((a, c) => a[0] - c[0] || a[1] - c[1]);
-      g.save(); g.lineCap = 'round'; g.strokeStyle = 'rgba(22,163,74,.9)'; g.lineWidth = 6;
+      const grow = Math.min(1, (now - winStart) / 450);
+      const ex = pts[0][0] + (pts[pts.length - 1][0] - pts[0][0]) * grow, ey = pts[0][1] + (pts[pts.length - 1][1] - pts[0][1]) * grow;
+      const pulse = 0.75 + 0.25 * Math.sin(now / 160);
+      g.save(); g.lineCap = 'round'; g.strokeStyle = `rgba(22,163,74,${0.9 * pulse})`; g.lineWidth = 6;
       g.shadowColor = 'rgba(34,197,94,.9)'; g.shadowBlur = 14;
-      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); g.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]); g.stroke();
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); g.lineTo(ex, ey); g.stroke();
       g.restore();
+      // các tia sáng lấp lánh quanh dòng thắng
+      g.save(); g.shadowColor = 'rgba(255,240,140,.9)'; g.shadowBlur = 8;
+      for (let k = 0; k < pts.length * 3; k++) {
+        const ph = (now / 700 + k * 0.37) % 1, base = pts[k % pts.length];
+        const ang = k * 2.4 + now / 900, rad = 10 + ph * 30;
+        const x = base[0] + Math.cos(ang) * rad, y = base[1] + Math.sin(ang) * rad - ph * 10, sz = (1 - ph) * 5;
+        g.fillStyle = `rgba(255,236,120,${1 - ph})`;
+        g.beginPath(); g.moveTo(x, y - sz); g.lineTo(x + sz * 0.3, y - sz * 0.3); g.lineTo(x + sz, y); g.lineTo(x + sz * 0.3, y + sz * 0.3);
+        g.lineTo(x, y + sz); g.lineTo(x - sz * 0.3, y + sz * 0.3); g.lineTo(x - sz, y); g.lineTo(x - sz * 0.3, y - sz * 0.3); g.closePath(); g.fill();
+      }
+      g.restore();
+      animating = true;
     }
     if (hover >= 0 && !b[hover] && !over && !thinking && (mode !== 'bot' || turn === human)) mark(turn, px(hover), py(hover), 1, 0.35);
     let text = over;
     if (!over) text = thinking ? ui.thinking : mode === 'bot' ? ui.yourTurn : (turn === 1 ? ui.turnX : ui.turnO);
     statusEl.textContent = text;
     statusEl.className = 'bd-status' + (over ? ' done' : '');
-    if (animating) requestAnimationFrame(draw);
+    if (animating && !raf) raf = requestAnimationFrame(() => { raf = 0; draw(); });
   }
 
   // ---------- Điều khiển ----------
@@ -267,8 +291,16 @@ const ui = {
       if (mode === 'bot') stats.d++;
     }
     if (over && mode === 'bot') { try { localStorage.setItem('caro-stats', JSON.stringify(stats)); } catch {} }
+    const who = turn;
     turn = 3 - turn;
     animStart = performance.now();
+    if (winLine.length) winStart = animStart + 300;
+    // tiếng đặt quân: X trầm hơn O
+    setTimeout(() => { sfx.tone(who === 1 ? 190 : 250, 0.1, 'triangle', 0.3, who === 1 ? 120 : 165); sfx.noise(0.04, 0.12, 2200); }, 200);
+    if (over) setTimeout(() => {
+      if (winLine.length) sfx.play(mode === 'bot' && who !== human ? 'lose' : 'win');
+      else sfx.tone(330, 0.5, 'triangle', 0.2, 240);
+    }, 520);
     draw();
     if (!over && mode === 'bot' && turn !== human) botTurn();
   }
@@ -307,6 +339,7 @@ const ui = {
   }
   document.getElementById('cr-undo')!.addEventListener('click', () => {
     if (thinking || !moves.length) return;
+    sfx.play('swoosh');
     do { const i = moves.pop()!; b[i] = 0; turn = 3 - turn; } while (moves.length && mode === 'bot' && turn !== human);
     over = ''; winLine = [];
     if (over === '' && mode === 'bot' && turn !== human) { botTurn(); return; }
@@ -331,5 +364,8 @@ const ui = {
 </script>
 
 <style is:global>
+  .sfx-btn { background: rgba(30, 35, 60, .88) !important; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
   #cr-menu[hidden], #cr-game[hidden], #cr-botopts[hidden] { display: none; }
+  #cr-game { position: relative; }
+  #cr-game .sfx-btn { top: -4px !important; right: 4px !important; }
   #cr-canvas { width: min(100%, 860px); height: auto; aspect-ratio: 1; display: block; border-radius: 10px; border: 4px solid #4a3220; box-shadow: 0 14px 36px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.15); touch-action: manipulation; cursor: pointer; }</style>

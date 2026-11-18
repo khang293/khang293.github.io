@@ -64,18 +64,30 @@ const T = {
   .mn-c:hover:not(.open) { filter: brightness(1.12); }
   .mn-c:active:not(.open) { transform: scale(.94); }
   .mn-c svg { width: 66%; height: 66%; }
-  .mn-c.open { cursor: default; background: color-mix(in srgb, var(--accent) 7%, var(--bg)); box-shadow: inset 0 0 0 1px var(--line); animation: mnOpen .26s ease-out backwards; animation-delay: calc(var(--d, 0) * 22ms); }
-  @keyframes mnOpen { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .mn-c.open { cursor: default; background: color-mix(in srgb, var(--accent) 7%, var(--bg)); box-shadow: inset 0 0 0 1px var(--line), inset 0 3px 6px rgba(0,0,0,.14); animation: mnOpen .3s cubic-bezier(.2,.9,.3,1.2) backwards; animation-delay: calc(var(--d, 0) * 22ms); text-shadow: 0 1px 0 rgba(255,255,255,.25); }
+  @keyframes mnOpen { 0% { transform: scale(.35) rotate(-10deg); opacity: 0; filter: brightness(1.8); } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: none; opacity: 1; filter: none; } }
   .mn-c.n1 { color: #3b82f6; } .mn-c.n2 { color: #16a34a; } .mn-c.n3 { color: #ef4444; } .mn-c.n4 { color: #7c3aed; }
   .mn-c.n5 { color: #b45309; } .mn-c.n6 { color: #0891b2; } .mn-c.n7 { color: #be185d; } .mn-c.n8 { color: #64748b; }
-  .mn-c.boom { background: #ef4444; animation: mnBoom .4s ease-out; }
+  .mn-c.boom { background: #ef4444; animation: mnBoom .5s ease-out; position: relative; z-index: 2; }
   .mn-c.mine { background: color-mix(in srgb, #ef4444 25%, var(--bg)); }
+  .mn-c.chain { animation: mnChain .5s ease-out; position: relative; }
+  .mn-c.boom::after, .mn-c.chain::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid #fb923c; animation: mnRing .55s ease-out forwards; pointer-events: none; }
   .mn-c.wrong { background: color-mix(in srgb, #f59e0b 35%, var(--bg)); }
-  @keyframes mnBoom { 0% { transform: scale(.6); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  @keyframes mnBoom { 0% { transform: scale(.6); filter: brightness(2.5); } 60% { transform: scale(1.4); } 100% { transform: scale(1); filter: none; } }
+  @keyframes mnChain { 0% { transform: scale(.4); background: #fde047; filter: brightness(2); } 55% { transform: scale(1.25); background: #f97316; } 100% { transform: scale(1); } }
+  @keyframes mnRing { from { transform: scale(.5); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+  .mn-board.shake { animation: mnShake .45s ease-out; }
+  @keyframes mnShake { 0%, 100% { transform: none; } 15% { transform: translate(-6px, 3px); } 30% { transform: translate(5px, -4px); } 45% { transform: translate(-4px, -2px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(-2px, 1px); } }
+  .mn-c.wave { animation: mnWave .7s ease-in-out backwards; animation-delay: calc(var(--w, 0) * 35ms); }
+  @keyframes mnWave { 0%, 100% { transform: none; } 40% { transform: translateY(-8px) scale(1.1); filter: brightness(1.3); } }
+  .mn-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 80; overflow: hidden; }
+  .mn-confetti i { position: absolute; top: -14px; width: 9px; height: 14px; border-radius: 2px; animation: mnFall 2.4s ease-in forwards; }
+  @keyframes mnFall { to { transform: translate(var(--dx, 0), 110vh) rotate(var(--rot, 540deg)); opacity: .9; } }
   @media (max-width: 520px) { .mn-board { --cs: 34px; } }
 </style>
 
 <script>
+  import { sfx, mountMute } from '../../data/sfx';
   // <logic>
   // Rải mìn, tránh ô (sr,sc) và 8 ô quanh nó. rnd là hàm ngẫu nhiên [0,1)
   function placeMines(rows, cols, mines, sr, sc, rnd) {
@@ -126,6 +138,7 @@ const T = {
   // </logic>
 
   const root = document.getElementById('mn') as HTMLElement;
+  mountMute(root);
   const ui = JSON.parse(root.dataset.ui || '{}');
   const boardEl = document.getElementById('mn-board') as HTMLElement;
   const leftEl = document.getElementById('mn-left') as HTMLElement;
@@ -150,6 +163,7 @@ const T = {
     if (s !== undefined) si = s;
     ({ r: R, c: C, m: M } = SIZES[si]);
     stopTimer(); started = false; over = false; flags = 0; openCount = 0;
+    boardEl.classList.remove('shake');
     mine = []; near = []; opened = new Array(R * C).fill(false); flagged = new Array(R * C).fill(false);
     leftEl.textContent = String(M); timeEl.textContent = '0'; statusEl.textContent = ''; statusEl.className = 'bd-status';
     boardEl.style.setProperty('--cols', String(C));
@@ -179,12 +193,19 @@ const T = {
       timer = window.setInterval(() => { timeEl.textContent = String(Math.floor((Date.now() - t0) / 1000)); }, 250);
     }
     if (mine[i]) return lose(i);
-    for (const [j, d] of floodOpen(i, R, C, mine, near, opened, flagged)) { paintOpen(j, d); openCount++; }
+    const res = floodOpen(i, R, C, mine, near, opened, flagged);
+    for (const [j, d] of res) { paintOpen(j, d); openCount++; }
+    // âm thanh: ô số kêu cao thấp theo số mìn, vùng trống loang ra như gợn sóng
+    if (res.length > 1) {
+      const seen = new Set<number>();
+      for (const [, d] of res) if (!seen.has(d) && seen.size < 12) { seen.add(d); sfx.tone(340 + d * 38, 0.06, 'sine', 0.13, undefined, d * 0.03); }
+    } else sfx.tone(380 + near[i] * 70, 0.09, 'triangle', 0.22, 420 + near[i] * 80);
     if (openCount === R * C - M) win();
   }
   function toggleFlag(i: number) {
     if (opened[i] || over) return;
     flagged[i] = !flagged[i]; flags += flagged[i] ? 1 : -1;
+    sfx.play(flagged[i] ? 'place' : 'click');
     cells[i].innerHTML = flagged[i] ? '<svg viewBox="0 0 24 24"><use href="#mn-flag"/></svg>' : '';
     leftEl.textContent = String(M - flags);
   }
@@ -198,19 +219,52 @@ const T = {
       const j = rr * C + cc; ns.push(j); if (flagged[j]) f++;
     }
     if (f !== near[i]) return;
+    sfx.play('swoosh');
     for (const j of ns) { if (over) break; if (!flagged[j] && !opened[j]) openFrom(j); }
   }
   function lose(hit: number) {
     over = true; stopTimer();
-    for (let i = 0; i < R * C; i++) {
-      if (mine[i] && !flagged[i]) { cells[i].classList.add('open', 'mine'); cells[i].style.setProperty('--d', '0'); cells[i].innerHTML = '<svg viewBox="0 0 24 24"><use href="#mn-mine"/></svg>'; }
-      else if (!mine[i] && flagged[i]) cells[i].classList.add('wrong');
-    }
-    cells[hit].classList.add('boom');
+    for (let i = 0; i < R * C; i++) if (!mine[i] && flagged[i]) cells[i].classList.add('wrong');
+    // nổ dây chuyền: mìn nổ lần lượt từ ô trúng ra xa dần
+    const hr = Math.floor(hit / C), hc = hit % C;
+    const rest = [];
+    for (let i = 0; i < R * C; i++) if (mine[i] && !flagged[i] && i !== hit) rest.push(i);
+    rest.sort((a, b) => Math.hypot(Math.floor(a / C) - hr, (a % C) - hc) - Math.hypot(Math.floor(b / C) - hr, (b % C) - hc));
+    const showMine = (i: number, cls: string) => {
+      cells[i].classList.add('open', 'mine', cls); cells[i].style.setProperty('--d', '0');
+      cells[i].innerHTML = '<svg viewBox="0 0 24 24"><use href="#mn-mine"/></svg>';
+    };
+    cells[hit].classList.add('open', 'boom'); showMine(hit, 'boom');
+    boardEl.classList.remove('shake'); void boardEl.offsetWidth; boardEl.classList.add('shake');
+    sfx.play('explode');
+    const step = Math.max(18, Math.min(90, 1400 / Math.max(1, rest.length)));
+    rest.forEach((i, k) => {
+      setTimeout(() => {
+        if (!over) return;
+        showMine(i, 'chain');
+        if (k % 2 === 0 || rest.length < 10) sfx.play('boom');
+      }, 220 + k * step);
+    });
     statusEl.textContent = ui.lose; statusEl.className = 'bd-status';
+    setTimeout(() => { if (over) sfx.play('lose'); }, 300 + rest.length * step * 0.6);
+  }
+  function confetti() {
+    const box = document.createElement('div');
+    box.className = 'mn-confetti';
+    const colors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6'];
+    for (let i = 0; i < 70; i++) {
+      const p = document.createElement('i');
+      p.style.cssText = `left:${Math.random() * 100}%;background:${colors[i % colors.length]};--dx:${(Math.random() - 0.5) * 240}px;--rot:${Math.random() * 900}deg;animation-delay:${Math.random() * 0.5}s;animation-duration:${1.8 + Math.random() * 1.4}s`;
+      box.appendChild(p);
+    }
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 3800);
   }
   function win() {
     over = true; stopTimer();
+    sfx.play('win'); confetti();
+    // sóng nhấp nhô lan khắp bàn
+    cells.forEach((el, i) => { el.style.setProperty('--w', String(Math.floor(i / C) + (i % C))); el.classList.add('wave'); });
     const secs = Math.max(1, Math.round((Date.now() - t0) / 1000));
     timeEl.textContent = String(secs);
     for (let i = 0; i < R * C; i++) if (mine[i] && !flagged[i]) { flagged[i] = true; cells[i].innerHTML = '<svg viewBox="0 0 24 24"><use href="#mn-flag"/></svg>'; }

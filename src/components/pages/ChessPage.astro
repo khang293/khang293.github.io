@@ -1,4 +1,4 @@
----
+﻿---
 import Base from '../../layouts/Base.astro';
 import { lp, type Lang } from '../../i18n';
 import { gamesUi } from '../../data/games';
@@ -101,6 +101,7 @@ for (const side of ['w', 'b'] as const) {
 
 <script>
   import { startState, legalMoves, makeMove, status, inCheck, bestMove, posKey, type State, type Move } from '../../data/chessEngine';
+  import { sfx, mountMute } from '../../data/sfx';
 
   const root = document.getElementById('chess') as HTMLElement;
   const ui = JSON.parse(root.dataset.ui || '{}');
@@ -124,6 +125,8 @@ for (const side of ['w', 'b'] as const) {
   let thinking = false;
   let pendingPromo: Move[] = [];
   let animate = false;
+  let capGhost: { p: number; sq: number } | null = null;
+  mountMute(document.querySelector('.ch-wrap') as HTMLElement);
   let stats = { w: 0, d: 0, l: 0 };
   try { const s = JSON.parse(localStorage.getItem('chess-stats') || 'null'); if (s) stats = { ...stats, ...s }; } catch {}
 
@@ -198,6 +201,22 @@ for (const side of ['w', 'b'] as const) {
         requestAnimationFrame(() => requestAnimationFrame(() => { to.style.transition = 'transform .22s ease-out'; to.style.transform = ''; }));
       }
     }
+    // Quân bị ăn mờ dần và bay lên, kèm vòng sóng ở ô bị ăn
+    if (animate && capGhost) {
+      const sqEl = boardEl.querySelector(`[data-sq="${capGhost.sq}"]`) as HTMLElement | null;
+      if (sqEl) {
+        // đặt hiệu ứng trong khung (không trong ô) để không mất khi bàn cờ được vẽ lại
+        const frame = boardEl.parentElement as HTMLElement;
+        const fr = frame.getBoundingClientRect(), r = sqEl.getBoundingClientRect();
+        const box = document.createElement('span');
+        box.className = 'ch-fx';
+        box.style.cssText = `left:${r.left - fr.left}px;top:${r.top - fr.top}px;width:${r.width}px;height:${r.height}px`;
+        box.innerHTML = `<span class="ch-ghost">${svg(Math.abs(capGhost.p), capGhost.p > 0 ? 'w' : 'b')}</span><span class="ch-burst"></span>`;
+        frame.appendChild(box);
+        setTimeout(() => box.remove(), 560);
+      }
+    }
+    capGhost = null;
     animate = false;
 
     let text = '';
@@ -235,22 +254,34 @@ for (const side of ['w', 'b'] as const) {
 
   function play(m: Move) {
     hist.push({ s: st, last });
+    const taken = st.b[m.to] || (m.ep ? -st.turn : 0); // quân bị ăn (để làm hiệu ứng)
+    capGhost = taken ? { p: taken, sq: m.to } : null;
     st = makeMove(st, m);
     last = m; sel = -1; targets = [];
     promoEl.hidden = true; pendingPromo = [];
     animate = true;
     afterMove();
+    // âm thanh
+    if (m.promo) sfx.play('power');
+    else if (m.castle) { sfx.play('place'); setTimeout(() => sfx.play('place'), 110); }
+    else if (taken) sfx.play('capture');
+    else sfx.play('move');
+    if (over) {
+      const humanWon = mode !== 'bot' || st.turn !== human;
+      const isMate = status(st) === 'mate';
+      setTimeout(() => (isMate ? sfx.play(humanWon ? 'win' : 'lose') : sfx.tone(330, 0.5, 'triangle', 0.2, 240)), 260);
+    } else if (inCheck(st)) setTimeout(() => sfx.play('check'), 140);
     render();
     if (!over && mode === 'bot' && st.turn !== human) botTurn();
   }
 
   function botTurn() {
-    thinking = true; render();
+    thinking = true; statusEl.textContent = ui.thinking; // không vẽ lại bàn để nước vừa đi kịp trượt xong
     setTimeout(() => {
       const m = bestMove(st, level);
       thinking = false;
       if (m) play(m); else render();
-    }, 160);
+    }, 320);
   }
 
   boardEl.addEventListener('click', (e) => {
@@ -267,7 +298,7 @@ for (const side of ['w', 'b'] as const) {
       }
     }
     const p = st.b[sq];
-    if (p && (p > 0) === (st.turn > 0)) { sel = sq; targets = legal.filter((m) => m.from === sq); }
+    if (p && (p > 0) === (st.turn > 0)) { sel = sq; targets = legal.filter((m) => m.from === sq); sfx.play('click'); }
     else { sel = -1; targets = []; }
     render();
   });
@@ -311,6 +342,7 @@ for (const side of ['w', 'b'] as const) {
 </script>
 
 <style is:global>
+  .sfx-btn { background: rgba(30, 35, 60, .88) !important; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
   #ch-menu[hidden], #ch-game[hidden], #ch-botopts[hidden], #ch-promo[hidden] { display: none; }
   .ch-wrap { width: min(100%, 640px); }
 
@@ -327,13 +359,31 @@ for (const side of ['w', 'b'] as const) {
   .ch-sq { position: relative; aspect-ratio: 1; min-width: 0; border: 0; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font: inherit; }
   .ch-sq.lt { background: linear-gradient(135deg, #f3e1bd, #ead3a6); }
   .ch-sq.dk { background: linear-gradient(135deg, #b98a5e, #a67848); }
+  /* Vân gỗ nhẹ phủ lên cả bàn */
+  .ch-board { position: relative; }
+  .ch-board::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; mix-blend-mode: multiply; opacity: .5;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.012 .22' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .3  0 0 0 0 .15  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); background-size: 260px 260px; }
   .ch-sq.last::before { content: ''; position: absolute; inset: 0; background: rgba(250, 218, 60, .42); }
-  .ch-sq.sel::before { content: ''; position: absolute; inset: 0; background: rgba(60, 190, 90, .55); }
-  .ch-sq.chk::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,60,60,.95) 15%, rgba(230,40,40,.55) 50%, transparent 78%); }
-  .ch-sq:hover { filter: brightness(1.06); }
-  .ch-sq.mv::after { content: ''; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 85, 40, .5); z-index: 2; }
-  .ch-sq.cap::after { content: ''; position: absolute; inset: 3%; border-radius: 50%; border: 5px solid rgba(200, 40, 40, .6); z-index: 2; }
+  .ch-sq.sel::before { content: ''; position: absolute; inset: 0; background: rgba(60, 190, 90, .55); animation: chFade .2s ease-out; box-shadow: inset 0 0 0 3px rgba(40, 150, 70, .7); }
+  .ch-sq.chk::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,60,60,.95) 15%, rgba(230,40,40,.55) 50%, transparent 78%); animation: chPulse 1s ease-in-out infinite; }
+  .ch-sq { transition: filter .15s; }
+  .ch-sq:hover { filter: brightness(1.08); }
+  .ch-sq.mv::after { content: ''; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 85, 40, .5); z-index: 2; animation: chDot .22s cubic-bezier(.3, 1.6, .5, 1); }
+  .ch-sq.cap::after { content: ''; position: absolute; inset: 3%; border-radius: 50%; border: 5px solid rgba(200, 40, 40, .6); z-index: 2; animation: chDot .22s cubic-bezier(.3, 1.6, .5, 1); }
   .pc { position: relative; z-index: 3; width: 88%; height: 88%; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+  .ch-sq.sel .pc { transform: translateY(-3px) scale(1.06); transition: transform .12s; filter: drop-shadow(0 5px 4px rgba(0,0,0,.5)); }
+  .ch-frame { position: relative; }
+  .ch-fx { position: absolute; z-index: 8; pointer-events: none; grid-column: auto; }
+  .ch-ghost { position: absolute; z-index: 6; width: 88%; height: 88%; left: 6%; top: 6%; pointer-events: none; animation: chGhost .5s ease-out forwards; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+  .ch-burst { position: absolute; z-index: 6; left: 50%; top: 50%; width: 30%; height: 30%; margin: -15% 0 0 -15%; border-radius: 50%; border: 3px solid rgba(255, 200, 60, .95); pointer-events: none; animation: chBurst .45s ease-out forwards; }
+  @keyframes chFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes chPulse { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.05); } }
+  @keyframes chDot { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes chGhost { 0% { opacity: 1; transform: scale(1) rotate(0); } 100% { opacity: 0; transform: translateY(-26px) scale(.5) rotate(20deg); } }
+  @keyframes chBurst { 0% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(3.4); } }
+  .ch-wrap .sfx-btn { top: -2px !important; right: 0 !important; }
+  .ch-wrap { position: relative; }
+  .bd-status.done { animation: chFade .5s ease-out; }
 
   .ch-tray { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 4px; font-size: .88rem; }
   .ch-tray b { font-weight: 700; }
