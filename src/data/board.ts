@@ -1,0 +1,62 @@
+// Chữ hiển thị của cờ vua (/game/chess/) và cờ caro (/game/caro/). Xóa hai game thì xóa luôn file này.
+const common = {
+  vi: { modeBot: 'Chơi với máy', modeTwo: 'Hai người một máy', level: 'Độ khó', levels: ['Dễ', 'Thường', 'Khó'], start: 'Bắt đầu', undo: 'Đi lại', again: 'Ván mới', menu: 'Menu', yourTurn: 'Lượt của bạn', thinking: 'Máy đang nghĩ...', stats: 'Thắng / Hòa / Thua' },
+  en: { modeBot: 'Play the computer', modeTwo: 'Two players, one device', level: 'Level', levels: ['Easy', 'Normal', 'Hard'], start: 'Start', undo: 'Undo', again: 'New game', menu: 'Menu', yourTurn: 'Your turn', thinking: 'Computer is thinking...', stats: 'Wins / Draws / Losses' },
+};
+
+export const boardUi = {
+  vi: {
+    chess: {
+      ...common.vi,
+      title: 'Cờ Vua',
+      sub: 'Cờ vua đầy đủ luật: nhập thành, bắt tốt qua đường, phong cấp, chiếu hết. Đấu với máy hoặc chơi với bạn.',
+      side: 'Bạn cầm quân',
+      sides: ['Trắng', 'Đen', 'Ngẫu nhiên'],
+      keys: 'Bấm vào quân của bạn để thấy các ô đi được (chấm tròn), rồi bấm ô đích. Mức Khó máy suy nghĩ khoảng 1 đến 2 giây mỗi nước.',
+      white: 'Trắng', black: 'Đen', you: 'Bạn', bot: 'Máy',
+      turnOf: (c: string) => `Lượt của ${c}`,
+      check: 'Chiếu!',
+      mateWin: 'Chiếu hết! Bạn thắng!', mateLose: 'Chiếu hết, bạn thua.', mateOf: (c: string) => `Chiếu hết! ${c} thắng.`,
+      stalemate: 'Hòa do hết nước đi (pat).', fifty: 'Hòa do luật 50 nước.', material: 'Hòa do không đủ quân chiếu hết.', repeat: 'Hòa do lặp lại thế cờ 3 lần.',
+      promote: 'Phong tốt thành:',
+      pieces: ['Hậu', 'Xe', 'Tượng', 'Mã'],
+    },
+    caro: {
+      ...common.vi,
+      title: 'Cờ Caro',
+      sub: 'Bàn 15×15, ai xếp được 5 quân liền nhau theo hàng ngang, dọc hoặc chéo trước thì thắng.',
+      side: 'Bạn đánh',
+      sides: ['X (đi trước)', 'O (đi sau)'],
+      keys: 'Bấm vào ô trống để đặt quân. Máy sẽ chặn các đường 3, 4 quân của bạn nên hãy tạo hai đường cùng lúc để thắng.',
+      turnOf: (c: string) => `Lượt của ${c}`,
+      win: 'Bạn thắng!', lose: 'Bạn thua rồi.', winOf: (c: string) => `${c} thắng!`, draw: 'Hòa, bàn đã hết chỗ.',
+    },
+  },
+  en: {
+    chess: {
+      ...common.en,
+      title: 'Chess',
+      sub: 'Full chess rules: castling, en passant, promotion and checkmate. Play the computer or a friend.',
+      side: 'You play',
+      sides: ['White', 'Black', 'Random'],
+      keys: 'Click one of your pieces to see where it can go (dots), then click the target square. On Hard the computer thinks for about 1 to 2 seconds per move.',
+      white: 'White', black: 'Black', you: 'You', bot: 'Computer',
+      turnOf: (c: string) => `${c} to move`,
+      check: 'Check!',
+      mateWin: 'Checkmate! You win!', mateLose: 'Checkmate, you lose.', mateOf: (c: string) => `Checkmate! ${c} wins.`,
+      stalemate: 'Draw by stalemate.', fifty: 'Draw by the 50-move rule.', material: 'Draw, not enough material to checkmate.', repeat: 'Draw by threefold repetition.',
+      promote: 'Promote the pawn to:',
+      pieces: ['Queen', 'Rook', 'Bishop', 'Knight'],
+    },
+    caro: {
+      ...common.en,
+      title: 'Caro (Gomoku)',
+      sub: '15×15 board. The first to line up 5 stones in a row, horizontally, vertically or diagonally, wins.',
+      side: 'You play',
+      sides: ['X (moves first)', 'O (moves second)'],
+      keys: 'Click an empty cell to place a stone. The computer blocks your threes and fours, so build two threats at once to win.',
+      turnOf: (c: string) => `${c} to move`,
+      win: 'You win!', lose: 'You lost.', winOf: (c: string) => `${c} wins!`, draw: 'Draw, the board is full.',
+    },
+  },
+};
