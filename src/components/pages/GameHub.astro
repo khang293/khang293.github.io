@@ -7,6 +7,7 @@ interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const g = gamesUi[lang];
 const cards = [
+  { key: 'badminton', href: lp(lang, '/game/badminton/'), ...g.cards.badminton },
   { key: 'link', href: lp(lang, '/game/link/'), ...g.cards.link },
   { key: 'blocks', href: lp(lang, '/game/blocks/'), ...g.cards.blocks },
   { key: 'marbles', href: lp(lang, '/game/marbles/'), ...g.cards.marbles },

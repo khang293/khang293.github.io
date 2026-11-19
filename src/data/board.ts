@@ -1,4 +1,4 @@
-// Chữ hiển thị của cờ vua (/game/chess/) và cờ caro (/game/caro/). Xóa hai game thì xóa luôn file này.
+﻿// Chữ hiển thị của cờ vua (/game/chess/) và cờ caro (/game/caro/). Xóa hai game thì xóa luôn file này.
 const common = {
   vi: { modeBot: 'Chơi với máy', modeTwo: 'Hai người một máy', level: 'Độ khó', levels: ['Dễ', 'Thường', 'Khó'], start: 'Bắt đầu', undo: 'Đi lại', again: 'Ván mới', menu: 'Menu', yourTurn: 'Lượt của bạn', thinking: 'Máy đang nghĩ...', stats: 'Thắng / Hòa / Thua' },
   en: { modeBot: 'Play the computer', modeTwo: 'Two players, one device', level: 'Level', levels: ['Easy', 'Normal', 'Hard'], start: 'Start', undo: 'Undo', again: 'New game', menu: 'Menu', yourTurn: 'Your turn', thinking: 'Computer is thinking...', stats: 'Wins / Draws / Losses' },

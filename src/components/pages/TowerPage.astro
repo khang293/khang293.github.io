@@ -200,6 +200,7 @@ const ui = {
   let gold = 0, lives = 0, wave = 0;
   let waveOn = false, queue: { t: number; type: string }[] = [], waveT = 0, waveHp = 1;
   let speed = 1, over = '', running = false, time = 0;
+  let lowFx = false; // tự bật khi máy chạy chậm: bỏ khói, vệt đạn, bụi bay và đuốc sáng
   let selType = -1, selTower: any = null;
   let hover = { c: -1, r: -1 };
   let msgT = 0;
@@ -467,7 +468,8 @@ const ui = {
   function stepFx(dt: number) {
     for (const p of parts) { p.life -= dt; if (!p.ring) { p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; } }
     parts = parts.filter((p) => p.life > 0);
-    if (parts.length > 500) parts.splice(0, parts.length - 500);
+    const partCap = lowFx ? 140 : 320;
+    if (parts.length > partCap) parts.splice(0, parts.length - partCap);
     for (const b of bolts) b.life -= dt;
     bolts = bolts.filter((b) => b.life > 0);
     for (const f of floats) { f.t -= dt; f.y -= 24 * dt; }
@@ -605,10 +607,22 @@ const ui = {
   }
   function rr0(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
 
+  // Quầng sáng vẽ sẵn một lần cho mỗi màu rồi dùng lại, thay cho tạo gradient mới ở mọi khung hình (rất nặng trên điện thoại)
+  const sprites: Record<string, HTMLCanvasElement> = {};
+  function glowSprite(col: string, white = false) {
+    const key = (white ? 'w' : 'g') + col;
+    let s = sprites[key];
+    if (s) return s;
+    s = document.createElement('canvas'); s.width = s.height = 64;
+    const cx = s.getContext('2d')!, gr = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    if (white) { gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, col); } else gr.addColorStop(0, col);
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = gr; cx.fillRect(0, 0, 64, 64);
+    sprites[key] = s;
+    return s;
+  }
   function flashAt(c: CanvasRenderingContext2D, x: number, y: number, rad: number, col: string, k: number) {
-    const gr = c.createRadialGradient(x, y, 0, x, y, rad);
-    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
-    c.globalAlpha = Math.min(1, k); c.fillStyle = gr; c.beginPath(); c.arc(x, y, rad, 0, TAU); c.fill(); c.globalAlpha = 1;
+    c.globalAlpha = Math.min(1, k); c.drawImage(glowSprite(col, true), x - rad, y - rad, rad * 2, rad * 2); c.globalAlpha = 1;
   }
   function drawTower(c: CanvasRenderingContext2D, type: number, lvl: number, x: number, y: number, ang: number, t: number, recoil = 0, sc = 1, flash = 0) {
     const d = TW[type];
@@ -616,8 +630,8 @@ const ui = {
     c.save(); c.translate(x, y); c.scale(sc, sc);
     c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(0, 14, 22, 9, 0, 0, TAU); c.fill();
     if (lvl === 2) {
-      const gl = c.createRadialGradient(0, 0, 10, 0, 0, 36); gl.addColorStop(0, 'rgba(255,220,100,.38)'); gl.addColorStop(1, 'rgba(255,220,100,0)');
-      c.fillStyle = gl; c.beginPath(); c.arc(0, 0, 36 + Math.sin(t * 3) * 1.5, 0, TAU); c.fill();
+      const ar = 36 + Math.sin(t * 3) * 1.5;
+      c.drawImage(glowSprite('rgba(255,220,100,.38)'), -ar, -ar, ar * 2, ar * 2);
     }
     // đế: gỗ (cấp 1), đá (cấp 2), đá khảm vàng (cấp 3)
     const bc = lvl === 2 ? ['#6b6046', '#3b3526'] : lvl === 1 ? ['#7a8090', '#464a57'] : ['#8a6a43', '#523d26'];
@@ -688,8 +702,8 @@ const ui = {
     g.translate(0, bob);
     const ph = Math.sin(e.anim);
     if (e.type === 'boss') {
-      const au = g.createRadialGradient(0, 0, e.r * 0.6, 0, 0, e.r * 2.2); au.addColorStop(0, 'rgba(255,60,40,.35)'); au.addColorStop(1, 'rgba(255,60,40,0)');
-      g.fillStyle = au; g.beginPath(); g.arc(0, 0, e.r * 2.2 + Math.sin(e.anim * 0.7) * 3, 0, TAU); g.fill();
+      const ar = e.r * 2.2 + Math.sin(e.anim * 0.7) * 3;
+      g.drawImage(glowSprite('rgba(255,60,40,.35)'), -ar, -ar, ar * 2, ar * 2);
     }
     if (!e.fly) {
       // chân đi lần lượt
@@ -736,13 +750,12 @@ const ui = {
     // đuốc cháy và hạt bụi bay
     for (const tc of torches) {
       const fl = 1 + Math.sin(time * 11 + tc.ph) * 0.18 + Math.sin(time * 17 + tc.ph * 2) * 0.1;
-      const gl = g.createRadialGradient(tc.x, tc.y - 14, 0, tc.x, tc.y - 14, 26); gl.addColorStop(0, 'rgba(255,190,80,.38)'); gl.addColorStop(1, 'rgba(255,150,40,0)');
-      g.fillStyle = gl; g.beginPath(); g.arc(tc.x, tc.y - 14, 26 * fl, 0, TAU); g.fill();
+      if (!lowFx) { const tr = 26 * fl; g.drawImage(glowSprite('rgba(255,190,80,.38)'), tc.x - tr, tc.y - 14 - tr, tr * 2, tr * 2); }
       g.fillStyle = '#ff8c1a'; g.beginPath(); g.ellipse(tc.x, tc.y - 17, 3.2 * fl, 5.5 * fl, 0, 0, TAU); g.fill();
       g.fillStyle = '#ffd95e'; g.beginPath(); g.ellipse(tc.x, tc.y - 16, 1.8 * fl, 3.4 * fl, 0, 0, TAU); g.fill();
     }
     g.fillStyle = mapIdx === 1 ? 'rgba(255,235,190,.5)' : 'rgba(255,255,200,.55)';
-    for (const m of motes) {
+    if (!lowFx) for (const m of motes) {
       const mx = ((m.x + time * m.vx) % W + W) % W, my = ((m.y + time * m.vy + Math.sin(time + m.ph) * 8) % H + H) % H;
       g.globalAlpha = 0.25 + 0.25 * Math.sin(time * 1.5 + m.ph); g.beginPath(); g.arc(mx, my, m.s, 0, TAU); g.fill();
     }
@@ -775,7 +788,7 @@ const ui = {
     for (const e of enemies) if (e.fly) drawEnemy(e);
     // đạn có vệt đuôi
     for (const p of projs) {
-      if (p.trail && p.trail.length > 1) {
+      if (!lowFx && p.trail && p.trail.length > 1) {
         const col = p.k === 'arrow' ? '255,240,190' : p.k === 'ball' ? '255,170,70' : '170,230,255';
         for (let i = 1; i < p.trail.length; i++) {
           const a = i / p.trail.length;
@@ -806,8 +819,8 @@ const ui = {
       if (p.ring) { g.strokeStyle = p.col; g.globalAlpha = a; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, p.s * (1 - a * 0.7), 0, TAU); g.stroke(); g.globalAlpha = 1; }
       else if (p.glow) {
         const rad = p.s * (p.smoke ? 0.6 + (1 - a) * 0.9 : 0.5 + (1 - a) * 0.7);
-        const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad); gr.addColorStop(0, p.col); gr.addColorStop(1, 'rgba(255,255,255,0)');
-        g.globalAlpha = a * (p.smoke ? 0.8 : 0.9); g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, rad, 0, TAU); g.fill(); g.globalAlpha = 1;
+        if (lowFx && p.smoke) continue;
+        g.globalAlpha = a * (p.smoke ? 0.8 : 0.9); g.drawImage(glowSprite(p.col), p.x - rad, p.y - rad, rad * 2, rad * 2); g.globalAlpha = 1;
       } else if (p.spark) {
         g.globalAlpha = a; g.fillStyle = p.col; const s = p.s * (0.6 + a * 0.6);
         g.beginPath(); g.moveTo(p.x, p.y - s); g.lineTo(p.x + s * 0.4, p.y); g.lineTo(p.x, p.y + s); g.lineTo(p.x - s * 0.4, p.y); g.closePath(); g.fill();
@@ -988,10 +1001,16 @@ const ui = {
 
   // ---------- Vòng lặp ----------
   let last = performance.now(), acc = 0;
+  let frameEma = 16, slowFrames = 0;
   function frame(now: number) {
     requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (!running) return;
+    const raw = now - last;
+    const dt = Math.min(0.05, raw / 1000); last = now;
+    if (!running) { frameEma = 16; return; }
+    // Đo thời gian mỗi khung hình: nếu máy yếu (dưới khoảng 40 khung/giây) thì tự giảm hiệu ứng cho mượt
+    frameEma = frameEma * 0.96 + Math.min(raw, 100) * 0.04;
+    if (!lowFx && frameEma > 26 && ++slowFrames > 60) lowFx = true;
+    else if (frameEma <= 26) slowFrames = 0;
     if (!bg) paintBg();
     acc += dt * speed;
     let n = 0;
@@ -1000,9 +1019,12 @@ const ui = {
     draw();
     refreshHud();
   }
-  let hudT = 0;
+  let hudT = 0, hudGold = '', hudLives = -1, hudWave = -1;
   function refreshHud() {
-    elGold.textContent = String(Math.floor(gold)); elLives.textContent = String(lives); elWave.textContent = String(wave);
+    const gv = String(Math.floor(gold));
+    if (gv !== hudGold) { elGold.textContent = gv; hudGold = gv; }
+    if (lives !== hudLives) { elLives.textContent = String(lives); hudLives = lives; }
+    if (wave !== hudWave) { elWave.textContent = String(wave); hudWave = wave; }
     if (++hudT % 10 === 0) refreshUI();
   }
   requestAnimationFrame(frame);

@@ -6,6 +6,7 @@ export const gamesUi = {
     play: 'Chơi',
     back: '← Trò chơi',
     cards: {
+      badminton: { icon: '🏸', title: 'Cầu Lông Người Que', desc: 'Đánh cầu lông với người que: chạy, nhảy, đập cầu và bỏ nhỏ. Đấu với máy 3 mức hoặc hai người một máy.' },
       link: { icon: '🔗', title: 'Nối Cặp Cổ Điển', desc: 'Nối hai hình giống nhau bằng đường gấp khúc tối đa 3 đoạn, xóa hết bàn trước khi hết giờ.' },
       blocks: { icon: '🧱', title: 'Xếp Khối', desc: 'Xoay và xếp các khối rơi thành hàng kín để ghi điểm. Càng lâu càng nhanh, có khối giữ và bóng đáp.' },
       marbles: { icon: '🔮', title: 'Bắn Bi', desc: 'Bắn bi cùng màu để nổ chuỗi bi đang chạy trên đường xoắn trước khi chúng vào hố.' },
@@ -122,6 +123,7 @@ export const gamesUi = {
     play: 'Play',
     back: '← Games',
     cards: {
+      badminton: { icon: '🏸', title: 'Stickman Badminton', desc: 'Badminton with stick figures: run, jump, smash and drop shots. Play the computer on 3 levels or a friend on one device.' },
       link: { icon: '🔗', title: 'Classic Pair Link', desc: 'Connect two matching tiles with a path of at most 3 segments and clear the board before time runs out.' },
       blocks: { icon: '🧱', title: 'Block Stack', desc: 'Rotate and stack falling blocks into full rows to score. It speeds up over time, with hold and ghost piece.' },
       marbles: { icon: '🔮', title: 'Marble Blast', desc: 'Shoot matching marbles to pop the chain rolling along a spiral path before it reaches the hole.' },
