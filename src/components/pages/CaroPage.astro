@@ -317,8 +317,32 @@ const ui = {
     draw();
     if (!over && mode === 'bot' && turn !== human) botTurn();
   }
+  // Mức Siêu khó và Siêu khủng khiếp chạy trong Web Worker để trang không bị đứng khi máy nghĩ
+  let worker: Worker | null = null;
+  function runBot(me: number, ms: number, lvl: number): Promise<number> {
+    return new Promise((resolve) => {
+      const snap = new Int8Array(b);
+      const fallback = () => resolve(insaneMove(snap, me, 1500, N));
+      try {
+        if (!worker) worker = new Worker(new URL('../../data/caroWorker.ts', import.meta.url), { type: 'module' });
+        const w = worker;
+        const onMsg = (e: MessageEvent) => { w.removeEventListener('message', onMsg); resolve(e.data.mv); };
+        w.addEventListener('message', onMsg);
+        w.addEventListener('error', () => { w.removeEventListener('message', onMsg); worker = null; fallback(); }, { once: true });
+        w.postMessage({ board: snap, me, ms, n: N, lvl });
+      } catch { fallback(); }
+    });
+  }
   function botTurn() {
     thinking = true; draw();
+    if (level >= 4) {
+      const me = turn;
+      runBot(me, level >= 5 ? 4500 : 1500, level).then((i) => {
+        thinking = false;
+        if (i >= 0 && !b[i]) place(i); else draw();
+      });
+      return;
+    }
     setTimeout(() => {
       thinking = false;
       const i = aiMove(turn);
