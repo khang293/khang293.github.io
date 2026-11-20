@@ -624,15 +624,16 @@ const ui = {
   function flashAt(c: CanvasRenderingContext2D, x: number, y: number, rad: number, col: string, k: number) {
     c.globalAlpha = Math.min(1, k); c.drawImage(glowSprite(col, true), x - rad, y - rad, rad * 2, rad * 2); c.globalAlpha = 1;
   }
-  function drawTower(c: CanvasRenderingContext2D, type: number, lvl: number, x: number, y: number, ang: number, t: number, recoil = 0, sc = 1, flash = 0) {
-    const d = TW[type];
-    rctx = c;
-    c.save(); c.translate(x, y); c.scale(sc, sc);
+  // Đế tháp (bóng, đế, viền, chấm cấp) vẽ sẵn một lần cho mỗi cấp
+  const baseSprites: Record<number, HTMLCanvasElement> = {};
+  function towerBase(lvl: number) {
+    let sp = baseSprites[lvl];
+    if (sp) return sp;
+    sp = document.createElement('canvas'); sp.width = 96; sp.height = 104;
+    const c = sp.getContext('2d')!;
+    c.scale(2, 2); c.translate(24, 22);
+    const keep = rctx; rctx = c;
     c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(0, 14, 22, 9, 0, 0, TAU); c.fill();
-    if (lvl === 2) {
-      const ar = 36 + Math.sin(t * 3) * 1.5;
-      c.drawImage(glowSprite('rgba(255,220,100,.38)'), -ar, -ar, ar * 2, ar * 2);
-    }
     // đế: gỗ (cấp 1), đá (cấp 2), đá khảm vàng (cấp 3)
     const bc = lvl === 2 ? ['#6b6046', '#3b3526'] : lvl === 1 ? ['#7a8090', '#464a57'] : ['#8a6a43', '#523d26'];
     const bg2 = c.createLinearGradient(0, -19, 0, 19); bg2.addColorStop(0, bc[0]); bg2.addColorStop(1, bc[1]);
@@ -644,6 +645,20 @@ const ui = {
     c.stroke();
     if (lvl >= 1) { c.fillStyle = lvl === 2 ? '#ffe27a' : '#eef1f6'; for (const [sx, sy] of [[-17, -15], [17, -15], [-17, 15], [17, 15]]) { c.beginPath(); c.arc(sx, sy, 2.2, 0, TAU); c.fill(); } }
     c.fillStyle = '#2f323a'; rr(-15, -13, 30, 26, 6); c.fill();
+    for (let i = 0; i <= lvl; i++) { c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(-lvl * 4 + i * 8, 21, 2.2, 0, TAU); c.fill(); }
+    rctx = keep;
+    baseSprites[lvl] = sp;
+    return sp;
+  }
+  function drawTower(c: CanvasRenderingContext2D, type: number, lvl: number, x: number, y: number, ang: number, t: number, recoil = 0, sc = 1, flash = 0) {
+    const d = TW[type];
+    rctx = c;
+    c.save(); c.translate(x, y); c.scale(sc, sc);
+    if (lvl === 2) {
+      const ar = 36 + Math.sin(t * 3) * 1.5;
+      c.drawImage(glowSprite('rgba(255,220,100,.38)'), -ar, -ar, ar * 2, ar * 2);
+    }
+    c.drawImage(towerBase(lvl), -24, -22, 48, 52);
     c.rotate(ang);
     if (d.id === 'arrow') {
       const rc = recoil * 30, R = 12 + lvl;
@@ -661,7 +676,7 @@ const ui = {
       const barrels = lvl === 2 ? [-5, 5] : [0];
       for (const by of barrels) {
         const bw = lvl === 2 ? 8 : 12;
-        const gr = c.createLinearGradient(0, by - bw / 2, 0, by + bw / 2); gr.addColorStop(0, '#7b736c'); gr.addColorStop(0.5, '#4d4741'); gr.addColorStop(1, '#2f2b28');
+        const gr = '#4d4741';
         c.fillStyle = gr; c.fillRect(-4 - rc, by - bw / 2, L, bw);
         c.fillStyle = lvl === 2 ? '#f1c40f' : '#8f847a'; c.fillRect(L - 8 - rc, by - bw / 2 - 1.5, 4, bw + 3); c.fillRect(L - 3 - rc, by - bw / 2 - 1, 4, bw + 2);
       }
@@ -690,8 +705,39 @@ const ui = {
     }
     c.restore();
     rctx = g;
-    // pips cấp
-    for (let i = 0; i <= lvl; i++) { c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(x - lvl * 4 + i * 8, y + 21 * sc, 2.2, 0, TAU); c.fill(); }
+  }
+
+  // Thân quái vẽ sẵn thành ảnh (mỗi loại, màu, hướng nhìn) rồi dùng lại, thay vì vẽ lại hàng chục đường nét ở mọi khung hình
+  const enemySprites: Record<string, HTMLCanvasElement> = {};
+  function paintBody(c: CanvasRenderingContext2D, e: any, col: string, dir: number) {
+    c.fillStyle = col; c.beginPath();
+    if (e.type === 'tank') { rr(-e.r, -e.r, e.r * 2, e.r * 2, 6); c.fill(); c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(-e.r, 2, e.r * 2, 5); }
+    else if (e.type === 'armored') { c.arc(0, 0, e.r, 0, TAU); c.fill(); c.strokeStyle = '#dfe6ee'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, e.r - 1, Math.PI, TAU); c.stroke(); }
+    else if (e.type === 'boss') {
+      c.arc(0, 0, e.r, 0, TAU); c.fill();
+      c.fillStyle = '#f1c40f'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.5; c.beginPath(); c.moveTo(Math.cos(a) * e.r, Math.sin(a) * e.r); c.lineTo(Math.cos(a) * (e.r + 9), Math.sin(a) * (e.r + 9)); c.lineTo(Math.cos(a + 0.22) * e.r, Math.sin(a + 0.22) * e.r); c.fill(); }
+    } else { c.arc(0, 0, e.r, 0, TAU); c.fill(); }
+    // thân có nét sáng phía trên cho có khối
+    if (e.type !== 'tank') { c.fillStyle = 'rgba(255,255,255,.16)'; c.beginPath(); c.ellipse(-e.r * 0.2, -e.r * 0.45, e.r * 0.55, e.r * 0.3, -0.4, 0, TAU); c.fill(); }
+    const ex = dir * e.r * 0.08;
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(-e.r * 0.35 + ex, -e.r * 0.2, e.r * 0.26, 0, TAU); c.arc(e.r * 0.35 + ex, -e.r * 0.2, e.r * 0.26, 0, TAU); c.fill();
+    c.fillStyle = '#222'; c.beginPath(); c.arc(-e.r * 0.35 + ex + dir * e.r * 0.1, -e.r * 0.2, e.r * 0.12, 0, TAU); c.arc(e.r * 0.35 + ex + dir * e.r * 0.1, -e.r * 0.2, e.r * 0.12, 0, TAU); c.fill();
+    if (e.type === 'boss') { c.strokeStyle = '#2b0b08'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-e.r * 0.6, -e.r * 0.55); c.lineTo(-e.r * 0.1, -e.r * 0.35); c.moveTo(e.r * 0.6, -e.r * 0.55); c.lineTo(e.r * 0.1, -e.r * 0.35); c.stroke(); }
+
+  }
+  function enemySprite(e: any, col: string, dir: number) {
+    const key = e.type + '|' + col + '|' + dir + '|' + e.r;
+    let sp = enemySprites[key];
+    if (sp) return sp;
+    const S = Math.ceil((e.r + 12) * 2), K = 2;
+    sp = document.createElement('canvas'); sp.width = sp.height = S * K;
+    const c = sp.getContext('2d')!;
+    c.scale(K, K); c.translate(S / 2, S / 2);
+    const keep = rctx; rctx = c;
+    paintBody(c, e, col, dir);
+    rctx = keep;
+    enemySprites[key] = sp;
+    return sp;
   }
 
   function drawEnemy(e: any) {
@@ -717,28 +763,16 @@ const ui = {
       g.fillStyle = 'rgba(255,255,255,.55)'; const w = Math.sin(e.anim * 2) * 6;
       g.beginPath(); g.ellipse(-e.r, -2, 11, 5 + w, -0.5, 0, TAU); g.fill(); g.beginPath(); g.ellipse(e.r, -2, 11, 5 + w, 0.5, 0, TAU); g.fill();
     }
-    g.fillStyle = col; g.beginPath();
-    if (e.type === 'tank') { rr(-e.r, -e.r, e.r * 2, e.r * 2, 6); g.fill(); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-e.r, 2, e.r * 2, 5); }
-    else if (e.type === 'armored') { g.arc(0, 0, e.r, 0, TAU); g.fill(); g.strokeStyle = '#dfe6ee'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, e.r - 1, Math.PI, TAU); g.stroke(); }
-    else if (e.type === 'boss') {
-      g.arc(0, 0, e.r, 0, TAU); g.fill();
-      g.fillStyle = '#f1c40f'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.5; g.beginPath(); g.moveTo(Math.cos(a) * e.r, Math.sin(a) * e.r); g.lineTo(Math.cos(a) * (e.r + 9), Math.sin(a) * (e.r + 9)); g.lineTo(Math.cos(a + 0.22) * e.r, Math.sin(a + 0.22) * e.r); g.fill(); }
-    } else { g.arc(0, 0, e.r, 0, TAU); g.fill(); }
+    const dir = e.dir || 1;
+    { const sp = enemySprite(e, col, dir), S = sp.width / 2; g.drawImage(sp, -S / 2, -S / 2, S, S); }
     if (e.slowT > 0) { g.fillStyle = 'rgba(140,220,255,.45)'; g.beginPath(); g.arc(0, 0, e.r + 2, 0, TAU); g.fill(); }
-    // thân có nét sáng phía trên cho có khối
-    if (e.type !== 'tank') { g.fillStyle = 'rgba(255,255,255,.16)'; g.beginPath(); g.ellipse(-e.r * 0.2, -e.r * 0.45, e.r * 0.55, e.r * 0.3, -0.4, 0, TAU); g.fill(); }
-    const dir = e.dir || 1, ex = dir * e.r * 0.08;
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(-e.r * 0.35 + ex, -e.r * 0.2, e.r * 0.26, 0, TAU); g.arc(e.r * 0.35 + ex, -e.r * 0.2, e.r * 0.26, 0, TAU); g.fill();
-    g.fillStyle = '#222'; g.beginPath(); g.arc(-e.r * 0.35 + ex + dir * e.r * 0.1, -e.r * 0.2, e.r * 0.12, 0, TAU); g.arc(e.r * 0.35 + ex + dir * e.r * 0.1, -e.r * 0.2, e.r * 0.12, 0, TAU); g.fill();
-    if (e.type === 'boss') { g.strokeStyle = '#2b0b08'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(-e.r * 0.6, -e.r * 0.55); g.lineTo(-e.r * 0.1, -e.r * 0.35); g.moveTo(e.r * 0.6, -e.r * 0.55); g.lineTo(e.r * 0.1, -e.r * 0.35); g.stroke(); }
     g.restore();
     // thanh máu: chỉ hiện khi quái đã bị thương (trùm luôn hiện)
     if (e.hp < e.max || e.type === 'boss') {
       const bw = e.r * 2 + 6, bh = e.type === 'boss' ? 6 : 4, f = Math.max(0, e.hp / e.max), yy = e.y - e.r - (e.fly ? 22 : 10), xx = e.x - bw / 2;
       g.fillStyle = 'rgba(0,0,0,.7)'; rr0(g, xx - 1, yy - 1, bw + 2, bh + 2, 3); g.fill();
-      const hg = g.createLinearGradient(0, yy, 0, yy + bh);
-      if (f > 0.5) { hg.addColorStop(0, '#9af09a'); hg.addColorStop(1, '#3fae3f'); } else if (f > 0.25) { hg.addColorStop(0, '#ffe27a'); hg.addColorStop(1, '#d9a100'); } else { hg.addColorStop(0, '#ff8a80'); hg.addColorStop(1, '#c62828'); }
-      g.fillStyle = hg; rr0(g, xx, yy, Math.max(1, bw * f), bh, 2); g.fill();
+      g.fillStyle = f > 0.5 ? '#4cc24c' : f > 0.25 ? '#e6b800' : '#d93a30';
+      rr0(g, xx, yy, Math.max(1, bw * f), bh, 2); g.fill();
     }
   }
 

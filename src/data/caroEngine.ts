@@ -49,11 +49,13 @@ type Cfg = {
   safeWide: number;   // số nước thử khi cần phá chuỗi ép thắng của đối thủ
   tempo: number;      // điểm thưởng cho bên đang tới lượt khi có đường 3
   qd: number;         // độ sâu tìm yên tĩnh (chỉ đi các nước tạo 4) ở lá
+  vctD: number;       // độ sâu tìm chuỗi ép thắng có cả "ba mở" (VCT), 0 = tắt
+  vctNodes: number;   // giới hạn số nút cho VCT
 };
-const CFG_INSANE: Cfg = { K: [16, 10, 7], vcfD: 14, vcfOppD: 12, vcfNodes: 30000, maxD: 12, lmr: false, leafVcf: 0, safeWide: 30, tempo: 0, qd: 0 };
+const CFG_INSANE: Cfg = { K: [16, 10, 7], vcfD: 14, vcfOppD: 12, vcfNodes: 30000, maxD: 12, lmr: false, leafVcf: 0, safeWide: 30, tempo: 0, qd: 0, vctD: 0, vctNodes: 0 };
 // Thử nghiệm cho thấy LMR, quét VCF ở lá và nới rộng số nước không giúp mạnh hơn (đấu ngang hoặc yếu hơn mức Siêu khó ở cùng thời gian),
 // còn thêm thời gian suy nghĩ thì có. Nên mức này giữ cấu hình của Siêu khó, nghĩ lâu hơn và tìm chuỗi ép thắng sâu hơn.
-const CFG_ULTRA: Cfg = { K: [16, 10, 7], vcfD: 20, vcfOppD: 16, vcfNodes: 80000, maxD: 24, lmr: false, leafVcf: 0, safeWide: 30, tempo: 0, qd: 4 };
+const CFG_ULTRA: Cfg = { K: [16, 10, 7], vcfD: 20, vcfOppD: 16, vcfNodes: 80000, maxD: 24, lmr: false, leafVcf: 0, safeWide: 30, tempo: 0, qd: 0, vctD: 0, vctNodes: 0 }; // VCT thử nghiệm thua Siêu khó (7-13, 8-12 trên 20 ván) nên đang tắt
 
 export const insaneMove = (board: Int8Array, me: number, ms = 1500, N = 15) => solve(board, me, ms, N, CFG_INSANE);
 export const ultraMove = (board: Int8Array, me: number, ms = 4500, N = 15) => solve(board, me, ms, N, CFG_ULTRA);
@@ -219,6 +221,85 @@ function solve(board: Int8Array, me: number, ms: number, N: number, cfg: Cfg): n
     return best;
   }
 
+  // ---------- VCT: chuỗi ép thắng gồm cả nước tạo "4" lẫn "ba mở" ----------
+  // Bên tấn công đi nước tạo đe dọa, bên thủ phải đỡ; thắng khi MỌI cách đỡ đều thua.
+  let tNodes = 0, tCap = cfg.vctNodes;
+  function defenceCells(att: number, m: number): number[] {
+    // các ô bên thủ có thể đỡ "ba mở" vừa tạo: mọi ô trống trong các cửa sổ cùng đường có >= 2 quân tấn công
+    const def = 3 - att, set = new Set<number>();
+    for (const w of cellW[m]) {
+      if (c[att][w] >= 3 && c[def][w] === 0) {
+        for (const x of WINS[w]) if (!bd[x]) set.add(x);
+        for (const x of WINS[w]) if (bd[x] === att) for (const w2 of cellW[x]) if (c[att][w2] >= 2 && c[def][w2] === 0) for (const y of WINS[w2]) if (!bd[y]) set.add(y);
+      }
+    }
+    return [...set];
+  }
+  function vct(att: number, d: number): number {
+    if (d <= 0 || ++tNodes > tCap) return -1;
+    if ((tNodes & 255) === 0 && Date.now() > deadline) { tNodes = tCap + 1; return -1; }
+    const def = 3 - att;
+    winCells(att, wc);
+    if (wc[0] >= 0) return wc[0];
+    winCells(def, wc);
+    if (wc[0] >= 0) return -1;
+    const fours = new Set<number>(), threes = new Set<number>();
+    for (const w of three[att]) for (const x of WINS[w]) if (!bd[x]) fours.add(x);
+    if (d >= 2) for (let i = 0; i < NN; i++) {
+      if (bd[i] || nb[i] === 0 || fours.has(i)) continue;
+      for (const w of cellW[i]) if (c[att][w] === 2 && c[def][w] === 0) { threes.add(i); break; }
+    }
+    const lf = [...fours].sort((x, y) => heur(y, att) - heur(x, att));
+    const lt = [...threes].sort((x, y) => heur(y, att) - heur(x, att)).slice(0, 8);
+    for (const m of lf.concat(lt)) {
+      place(m, att);
+      const r: number[] = [-1, -1];
+      winCells(att, r);
+      let win = false;
+      if (r[1] >= 0) { winCells(def, wc); win = wc[0] < 0; }
+      else if (r[0] >= 0) {
+        winCells(def, wc);
+        if (wc[0] < 0) {
+          const blk = r[0];
+          place(blk, def);
+          let defFive = false;
+          for (const w of cellW[blk]) if (c[def][w] === 5) { defFive = true; break; }
+          if (!defFive) win = vct(att, d - 1) >= 0;
+          unplace(blk);
+        }
+      } else if (!fours.has(m)) {
+        // m tạo "ba": có mở không? (đặt thêm một quân mà tạo hai chỗ thắng)
+        let live = false;
+        for (const w of cellW[m]) {
+          if (c[att][w] !== 3 || c[def][w] !== 0) continue;
+          for (const e of WINS[w]) { if (bd[e]) continue; place(e, att); const q: number[] = [-1, -1]; winCells(att, q); unplace(e); if (q[1] >= 0) { live = true; break; } }
+          if (live) break;
+        }
+        if (live) {
+          winCells(def, wc);
+          if (wc[0] < 0) {
+            const reps = defenceCells(att, m);
+            for (const x of three[def]) for (const y of WINS[x]) if (!bd[y]) reps.push(y);
+            const uniq = [...new Set(reps)];
+            if (uniq.length && uniq.length <= 14) {
+              win = true;
+              for (const dm of uniq) {
+                place(dm, def);
+                const ok = vct(att, d - 1) >= 0;
+                unplace(dm);
+                if (!ok) { win = false; break; }
+              }
+            }
+          }
+        }
+      }
+      unplace(m);
+      if (win) return m;
+      if (tNodes > tCap) return -1;
+    }
+    return -1;
+  }
+
   // ---------- Negamax với cắt tỉa alpha-beta ----------
   function negamax(depth: number, ply: number, alpha: number, beta: number, p: number): number {
     if ((++nodes & 255) === 0 && Date.now() > deadline) aborted = true;
@@ -304,6 +385,7 @@ function solve(board: Int8Array, me: number, ms: number, N: number, cfg: Cfg): n
   vNodes = 0; vCap = cfg.vcfNodes;
   const mine = vcf(me, cfg.vcfD);
   if (mine >= 0) return mine;
+  if (cfg.vctD) { tNodes = 0; tCap = cfg.vctNodes; const tm = vct(me, cfg.vctD); if (tm >= 0) return tm; }
 
   let rootMoves = gen(me, cfg.K[0], 0);
   // Nếu đối thủ sắp có chuỗi ép thắng thì chỉ chọn các nước làm chuỗi đó thất bại
