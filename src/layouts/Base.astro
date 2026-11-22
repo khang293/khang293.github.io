@@ -34,7 +34,7 @@ const contactLinks = [
   SITE.github && { label: 'GitHub', href: SITE.github },
   SITE.linkedin && { label: 'LinkedIn', href: SITE.linkedin },
   SITE.telegram && { label: 'Telegram', href: `https://t.me/${SITE.telegram}` },
-  SITE.zalo && { label: 'Zalo', href: SITE.zalo.startsWith('http') ? SITE.zalo : `https://zalo.me/${SITE.zalo}` },
+  SITE.zalo && { label: 'Zalo', href: zaloHref },
 ].filter(Boolean) as { label: string; href: string }[];
 ---
 <!doctype html>
@@ -81,22 +81,6 @@ const contactLinks = [
           function gtag() { dataLayer.push(arguments); }
           gtag('js', new Date());
           gtag('config', gaId, { allow_google_signals: false, allow_ad_personalization_signals: false });
-          // Đo game: lần chạm đầu tiên vào trang game, và các nút bắt đầu / chơi lại
-          (function () {
-            var m = location.pathname.match(/\/game\/([^/]+)\/?$/);
-            if (!m) return;
-            var name = m[1], first = false;
-            document.addEventListener('pointerdown', function (e) {
-              var t = e.target;
-              if (!t || !t.closest || t.closest('a, header, footer')) return;
-              if (!first) { first = true; gtag('event', 'game_interact', { game_name: name }); }
-              var b = t.closest('button');
-              if (b && /start|again|retry|new|play/i.test(b.id || '')) gtag('event', 'game_start', { game_name: name });
-            }, true);
-            document.addEventListener('keydown', function () {
-              if (!first) { first = true; gtag('event', 'game_interact', { game_name: name }); }
-            }, true);
-          })();
         </script>
       </>
     )}
@@ -135,7 +119,7 @@ const contactLinks = [
           <a href={lp(lang, '/how-we-work/')}>{t.howLink}</a>
           <a href={lp(lang, '/contact/')}>{t.nav.contact}</a>
           <a href={t.profile.file} download>{t.profile.download}</a>
-          <a href={lp(lang, '/game/')}>{t.gameLink}</a>
+          <a href="https://khang293.github.io/gamekhongvui/" target="_blank" rel="noopener">{t.gameLink}</a>
         </div>
         {contactLinks.length > 0 && (
           <div class="foot-links">
@@ -146,6 +130,7 @@ const contactLinks = [
       <div class="wrap wide copy">
         <p class="legal">{t.trademark}</p>
         © {new Date().getFullYear()} {SITE.author} · <a href={lp(lang, '/privacy/')}>{t.privacy}</a>
+        <p class="legal">{t.rights}</p>
       </div>
     </footer>
 
@@ -168,45 +153,6 @@ const contactLinks = [
           root.setAttribute('data-theme', next);
           try { localStorage.setItem('theme', next); } catch (e) {}
         });
-      })();
-    </script>
-    <script is:inline>
-      // Nút toàn màn hình cho trang trò chơi: dùng Fullscreen API nếu có, không thì phủ kín khung nhìn (iPhone)
-      (function () {
-        if (!/\/game\/[^/]+\/?$/.test(location.pathname)) return;
-        var main = document.querySelector('main');
-        if (!main) return;
-        var btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'fs-btn';
-        var vi = document.documentElement.lang === 'vi';
-        function paint() {
-          var on = main.classList.contains('is-fs');
-          btn.textContent = on ? '✕' : '⛶';
-          var label = on ? (vi ? 'Thoát toàn màn hình' : 'Exit full screen') : (vi ? 'Toàn màn hình' : 'Full screen');
-          btn.title = label; btn.setAttribute('aria-label', label);
-        }
-        function setFs(on) {
-          main.classList.toggle('is-fs', on);
-          document.body.classList.toggle('has-fs', on);
-          paint();
-          window.dispatchEvent(new Event('resize'));
-        }
-        btn.addEventListener('click', function () {
-          var on = !main.classList.contains('is-fs');
-          setFs(on);
-          var de = document.documentElement;
-          try {
-            if (on && de.requestFullscreen) de.requestFullscreen().catch(function () {});
-            else if (on && de.webkitRequestFullscreen) de.webkitRequestFullscreen();
-            else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
-          } catch (e) {}
-        });
-        // Người dùng thoát bằng phím Esc của trình duyệt
-        document.addEventListener('fullscreenchange', function () {
-          if (!document.fullscreenElement && main.classList.contains('is-fs')) setFs(false);
-        });
-        main.insertBefore(btn, main.firstChild);
-        paint();
       })();
     </script>
     <script is:inline>

@@ -65,9 +65,13 @@ const thanks = new URL(lp(lang, '/contact/?sent=1'), Astro.site).href;
         <li><b>{t.howLink}:</b> <a href={lp(lang, '/how-we-work/')}>{t.how.sub}</a></li>
       </ul>
       {SITE.zalo && (
-        <div class="qr">
-          <img src="/zalo-qr.jpg" alt="Zalo QR" width="160" height="160" loading="lazy" />
-          <p>{t.zaloQr}</p>
+        <div class="qr" id="zalo">
+          <a href="/zalo-qr.jpg" download="zalo-qr.jpg" aria-label="Zalo QR"><img src="/zalo-qr.jpg" alt="Zalo QR" width="220" height="220" loading="lazy" /></a>
+          <div>
+            <p><b>{t.zaloTitle}</b></p>
+            <ol class="qr-steps">{t.zaloSteps.map((s: string) => <li>{s}</li>)}</ol>
+            <a class="btn ghost sm" href="/zalo-qr.jpg" download="zalo-qr.jpg">{t.zaloSave}</a>
+          </div>
         </div>
       )}
     </section>

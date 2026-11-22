@@ -172,6 +172,9 @@ pre:hover .copy,.copy:focus{opacity:1}
 .qr{display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap}
 .qr img{border-radius:12px;border:1px solid var(--line);background:#fff}
 .qr p{margin:0;color:var(--muted);font-size:.9rem;max-width:280px}
+.qr-steps{margin:6px 0 10px;padding-left:20px;color:var(--muted);font-size:.9rem;max-width:420px}
+.qr-steps li{margin:4px 0}
+#zalo{scroll-margin-top:90px}
 .fail{background:color-mix(in srgb,#ef4444 14%,transparent);padding:12px 16px;border-radius:12px;font-weight:600}
 
 /* Nút Zalo nổi, nút đặt lịch */
@@ -239,33 +242,4 @@ pre:hover .copy,.copy:focus{opacity:1}
 .how-cols .panel{margin:0}
 .how-cta{margin-top:26px}
 
-/* Cần điều khiển tròn trên điện thoại cho các trò chơi */
-.joy{position:relative;width:136px;height:136px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 14%,var(--card)) 0 38%,var(--card) 39%);border:2px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
-.joy::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed var(--line)}
-.joy-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 2px 4px rgba(255,255,255,.35);pointer-events:none}
-
-/* Cờ vua và cờ caro: thành phần dùng chung */
-.bd-h { font-size: 1.05rem; margin: 20px 0 8px; }
-.bd-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-.bd-h + .bd-row { margin-top: 0; }
-.bd-opt { background: var(--card); color: var(--fg); border: 2px solid var(--line); border-radius: 12px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; }
-.bd-opt:hover { border-color: var(--accent); }
-.bd-opt.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--card)); }
-.bd-stat { color: var(--badge); font-weight: 600; font-size: .9rem; margin: 18px 0 10px; min-height: 1.2em; }
-.bd-status { font-weight: 700; margin: 18px 0 10px; min-height: 1.5em; }
-.bd-status.done { color: var(--accent); font-size: 1.15rem; }
-.bd-actions { margin-top: 16px; }
-
-/* Toàn màn hình cho các trò chơi (/game/<tên>/). Nút do script trong layout Base thêm vào. */
-.fs-btn{position:absolute;top:30px;right:18px;z-index:6;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:18px;line-height:1;cursor:pointer;padding:0}
-.fs-btn:hover{border-color:var(--accent)}
-main.is-fs.wrap{position:fixed;inset:0;z-index:9999;max-width:none;width:auto;margin:0;padding:52px 14px 14px;background:var(--bg);overflow:auto;display:flex;flex-direction:column;align-items:center;min-height:0}
-main.is-fs>*:not(.fs-btn){width:100%;max-width:1400px}
-main.is-fs .fs-btn{position:fixed;top:10px;right:12px}
-main.is-fs>p.meta,main.is-fs>h1{display:none}
-main.is-fs canvas{max-height:calc(100vh - 200px);width:auto!important;max-width:100%;height:auto;margin-left:auto;margin-right:auto}
-body.has-fs{overflow:hidden}
 main{position:relative}
-main.is-fs .bd-status,main.is-fs .bd-h{text-align:center}
-main.is-fs .bd-actions{justify-content:center}
-main.is-fs .ch-wrap{max-width:calc(100vh - 250px)!important;margin-left:auto!important;margin-right:auto!important}
