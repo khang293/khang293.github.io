@@ -75,12 +75,18 @@ const contactLinks = [
     )}
     {an.id && an.provider === 'google' && (
       <>
-        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${an.id}`}></script>
         <script is:inline define:vars={{ gaId: an.id }}>
           window.dataLayer = window.dataLayer || [];
           function gtag() { dataLayer.push(arguments); }
           gtag('js', new Date());
           gtag('config', gaId, { allow_google_signals: false, allow_ad_personalization_signals: false });
+          // Chỉ tải Google Analytics cho khách thật: bỏ qua khi chạy ở máy / mạng nội bộ và trình duyệt tự động
+          if (!navigator.webdriver && !/^(localhost|127\.|\[::1\]|192\.168\.|10\.)/.test(location.hostname)) {
+            var ga = document.createElement('script');
+            ga.async = true;
+            ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+            document.head.appendChild(ga);
+          }
         </script>
       </>
     )}
